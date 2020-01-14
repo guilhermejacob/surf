@@ -1,0 +1,24 @@
+Package: survflow
+Type: Package
+Title: Estimation of Flows with Complex Surveys
+Version: 0.1.0
+Author: Guilherme Jacob
+Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
+Description: Gross and net flow estimation with complex surveys based on Rojas (2014).
+BugReports: https://github.com/guilhermejacob/surveyflow
+Depends:
+    R (>= 3.2.1)
+Imports:
+    survey,
+    methods
+License: GPL-3
+LazyData: true
+Suggests:
+    testthat,
+    knitr,
+    rmarkdown,
+    DBI,
+    RODBC,
+    RSQLite
+RoxygenNote: 7.0.2
+Encoding: UTF-8
