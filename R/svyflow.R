@@ -38,16 +38,21 @@
 #'
 #' # gross flows
 #' gross.flows <- svyflow( ~v0 , design = flowdes , flow.type = "gross" )
+#' coef( gross.flows )
 #' SE( gross.flows )
 #'
 #' # net flows
 #' net.flows <- svyflow( ~v0 , design = flowdes , flow.type = "net" )
+#' coef( net.flows )
 #' SE( net.flows )
 #'
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
 svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , ... ){
+
+  # preprocess
+  design$variables <- lapply( design$variables , function( zz ) {rownames(zz) <- seq_len( nrow(zz)) ; zz} )
 
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = na.pass ) )
@@ -100,11 +105,11 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   yy <- lapply( seq_len( ncol( xx ) ) , function( j ) {
     kk <- model.matrix( ~-1+. , data = xx[,j,drop = FALSE] , contrasts.arg = lapply( xx[ , j, drop = FALSE ] , contrasts, contrasts=FALSE ) , na.action = na.pass )
     oo <- matrix( 0 , nrow = nrow(xx) , ncol = ncol(kk) , dimnames = list( seq_len( nrow(xx) ) , colnames( kk) ) )
-    oo[ match( rownames( kk ) , rownames( oo )) , ] <- kk
+    oo[ match( rownames( kk ) , rownames( oo ) ) , ] <- kk
     oo
   } )
 
-  # create matrix of contrasts and z variables
+  # create matrix of z variables
   zz <- apply( xx , 2 , function(z) as.numeric( !is.na(z) ) )
 
   ### special variables
