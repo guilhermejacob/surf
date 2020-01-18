@@ -54,12 +54,6 @@
 #' @method svyflow survey.design2
 svyflow.survey.design2 <- function( x , design , flow.type = c( "gross" , "net" ) , rounds = c(0,1) , max.iter = 10 , ... ){
 
-  # test valid arguments
-  flow.type <- match.arg( flow.type )
-  if ( class(x) != "formula" ) stop( "x must be a formula." )
-  if ( length(rounds) != 2 ) stop( "rounds must have length = 2." )
-  if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = na.pass ) )
   xx <- do.call( cbind , xx )
@@ -202,12 +196,6 @@ svyflow.survey.design2 <- function( x , design , flow.type = c( "gross" , "net" 
 #' @method svyflow svyrep.design
 svyflow.svyrep.design <- function( x , design , flow.type = c( "gross" , "net" ) , rounds = c(0,1) , max.iter = 10 , ... ){
 
-  # test valid arguments
-  flow.type <- match.arg( flow.type )
-  if ( class(x) != "formula" ) stop( "x must be a formula." )
-  if ( length(rounds) != 2 ) stop( "rounds must have length = 2." )
-  if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = na.pass ) )
   xx <- do.call( cbind , xx )
@@ -325,4 +313,12 @@ svyflow.svyrep.design <- function( x , design , flow.type = c( "gross" , "net" )
 svyflow.survflow.design <- function( x , design , ... ) NextMethod( "svyflow" , design )
 
 #' @export
-svyflow <- function( x , design , ... ) UseMethod( "svyflow" , design )
+svyflow <- function( x , design , ... ) {
+  # test valid arguments
+  flow.type <- match.arg( flow.type )
+  if ( class(x) != "formula" ) stop( "x must be a formula." )
+  if ( length(x) != 2 ) stop( "x must be a single variable." )
+  if ( length(rounds) != 2 ) stop( "rounds must have length = 2." )
+  if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
+  UseMethod( "svyflow" , design )
+}
