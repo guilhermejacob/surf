@@ -17,5 +17,4 @@ containing data from paired observations in the 1st and 2nd quarters of 2018.
 \seealso{
 \code{\link{dfa0}} for artificial data from a pseudo-population.
 }
-\keyword{datasets}
 \keyword{real}

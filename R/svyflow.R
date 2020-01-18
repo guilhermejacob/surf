@@ -19,7 +19,6 @@
 #' @author Guilherme Jacob
 #'
 #' @examples
-
 #'
 #' @references Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
 #' Survey Methodology 40(2), pp. 285-321.
@@ -64,7 +63,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   ww <- 1 / design$prob
 
   # aggregate
-  NN <- xtabs( ww ~ . , data = xx , addNA = TRUE )
+  NN <- xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE )
   RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
   CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
@@ -168,15 +167,6 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     a9 <- NN[i,j] * eta_iv[i]
     mu_var[i,j] <- (a7^2) * NNvar[i,j] + (a8^2) * eta_var[i] + (a9^2) * p_var[i,j]
   }
-
-  # #alternative strategy
-  # mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
-  # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-  #   nipij_k <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[[i]] ) + eta_iv[i] * ( up_ijk[[i]][[j]] / jp_ij[[i]][[j]] )
-  #   muij_k <- nipij[i,j] * nnij_k[[i]][[j]] + NN[i,j] * nipij_k
-  #   # mu_var[i,j] <- survey::svyrecvar( ww * nipij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-  #   mu_var[i,j] <- survey::svyrecvar( ww * muij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-  # }
 
   # format results
   rval <- if ( flow.type == "gross" ) mu_ij else nipij

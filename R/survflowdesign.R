@@ -5,7 +5,6 @@
 #' @param ids 	Formula or data frame specifying cluster ids from largest level to smallest level, ~0 or ~1 is a formula for no clusters.
 #' @param probs	 Formula or data frame specifying cluster sampling probabilities
 #' @param strata  Formula or vector specifying strata, use NULL for no strata
-#' @param variables	 Formula or data frame specifying the variables measured in the survey. If NULL, the data argument is used.
 #' @param fpc  Finite population correction: see Details below
 #' @param weights	 Formula or vector specifying sampling weights as an alternative to prob. Notice: longitudinal weights.
 #' @param data.list	 list of data frames to look up variables in the formula arguments.
@@ -15,8 +14,10 @@
 #' @details The arguments of this function are those of \code{\link[survey]{svydesign}},
 #' except for the \code{data.list}, which is a list of \code{data.frames}.
 #'
-#' @return Object of class "\code{survflow.design}", which are \link[survey]{svydesign} based on the initial survey
-#' with a \code{data.pairs} attribute containing the data for subsequent surveys.
+#' The first \code{data.frame} in \code{data.list} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
+#'
+#' @return Object of class "\code{survflow.design}", which are \link[survey]{svydesign} with
+#' a \code{data.pairs} attribute containing the data for subsequent surveys.
 #'
 #' @author Guilherme Jacob
 #'

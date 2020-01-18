@@ -31,12 +31,10 @@ svyflowdesign(
 \item{check.strata}{If TRUE, check that clusters are nested in strata}
 
 \item{weights}{Formula or vector specifying sampling weights as an alternative to prob. Notice: longitudinal weights.}
-
-\item{variables}{Formula or data frame specifying the variables measured in the survey. If NULL, the data argument is used.}
 }
 \value{
-Object of class "\code{survflow.design}", which are \link[survey]{svydesign} based on the initial survey
-with a \code{data.pairs} attribute containing the data for subsequent surveys.
+Object of class "\code{survflow.design}", which are \link[survey]{svydesign} with
+a \code{data.pairs} attribute containing the data for subsequent surveys.
 }
 \description{
 Specify a complex survey design for flow estimation.
@@ -44,6 +42,8 @@ Specify a complex survey design for flow estimation.
 \details{
 The arguments of this function are those of \code{\link[survey]{svydesign}},
 except for the \code{data.list}, which is a list of \code{data.frames}.
+
+The first \code{data.frame} in \code{data.list} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
 }
 \examples{
 # load data
