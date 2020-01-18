@@ -14,7 +14,7 @@
 #'
 #' @return Objects of class "flowstat", which are tables with a "var" attribute giving the variance and a "statistic" attribute giving the type of flow.
 #'
-#' These objects have methods for coef , vcov, SE, and cv.
+#' These objects have methods for coef, vcov, SE, and cv.
 #'
 #' @author Guilherme Jacob
 #'
@@ -28,26 +28,22 @@
 #'
 #' @examples
 #' # load data
-#' data( "initial" )
-#' data( "final" )
+#' data( "artificial" )
 #'
-#' # create survflow design object
+#' # create surf design object
 #' flowdes <-
-#'   svyflowdesign( ids = ~ upa ,
-#'                  strata = ~ estrato ,
-#'                  probs = ~ longprob ,
-#'                  data.list = list( f.qtr , s.qtr ) ,
+#'   svyflowdesign( ids = ~0 ,
+#'                  probs = ~ prob ,
+#'                  data.list = list( dfa0 , dfa1 ) ,
 #'                  nest = TRUE )
 #'
-#' # totals
-#' svytotal( ~factor( vd4002 ) , flowdes , na.rm = TRUE ) # drops observations with missing in any rounds
-#' svytotal( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 0 ) # drops observations with missing in the first round
-#' svytotal( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 1 ) # drops observations with missing in the second round
+#' # gross flows
+#' gross.flows <- svyflow( ~v0 , design = flowdes , flow.type = "gross" )
+#' SE( gross.flows )
 #'
-#' # means
-#' svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE ) # drops observations with missing in any rounds
-#' svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 0 ) # drops observations with missing in the first round
-#' svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 1 ) # drops observations with missing in the second round
+#' # net flows
+#' net.flows <- svyflow( ~v0 , design = flowdes , flow.type = "net" )
+#' SE( net.flows )
 #'
 #' @export
 #' @rdname svyflow
@@ -198,116 +194,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 #' @rdname svyflow
 #' @method svyflow svyrep.design
 svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , ... ){
-
-  # collect data
-  xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = na.pass ) )
-  xx <- do.call( cbind , xx )
-
-  # test column format
-  if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
-
-  # add time frame
-  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
-
-  # collect weights
-  ww <- weights( design , "sampling" )
-
-  # aggregate
-  NN <- xtabs( ww ~ . , data = xx , addNA = TRUE )
-  RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
-  CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
-  MM <- NN[ nrow( NN ) , ncol( NN ) ]
-  NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
-  N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
-  if ( any( NN <= 0 ) ) stop( "Some flows are equal to zero.")
-
-  # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
-  psi <- ( sum( NN ) + sum( RR ) ) / N
-  rhoRR <- sum( NN ) / ( sum( NN ) + sum( RR ) )
-  rhoMM <- MM / (sum( CC ) + MM )
-
-  ### maximum pseudo-likelihood estimates for eta_i and p_ij (Rojas et al., 2014, p.296 , Result 4.3 )
-
-  # starting values, using Chen and Fienberg (1974) reccomendation
-  eta_iv <- rowSums( NN ) / sum( NN )
-  p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
-
-  # iterative process
-  v = 0
-  while( v < max.iter ) {
-    # calculate values
-    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
-    eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
-    p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
-    v     <- v + 1
-  }
-  nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
-  rval <- if ( flow.type == "gross" ) N * nipij else nipij
-
-  ### variance calculations
-
-  # get replication weights
-  wr <- weights( design , "analysis" )
-
-  # calculate replicates
-  lres <- lapply( seq_len(ncol(wr)) , function( zz ) {
-
-    # aggregate
-    NN <- xtabs( wr[,zz] ~ . , data = xx , addNA = TRUE )
-    RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
-    CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
-    MM <- NN[ nrow( NN ) , ncol( NN ) ]
-    NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
-    N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
-    if ( any( NN <= 0 ) ) return( NULL )
-
-    # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
-    psi <- ( sum( NN ) + sum( RR ) ) / N
-    rhoRR <- sum( NN ) / ( sum( NN ) + sum( RR ) )
-    rhoMM <- MM / (sum( CC ) + MM )
-
-    ### maximum pseudo-likelihood estimates for eta_i and p_ij (Rojas et al., 2014, p.296 , Result 4.3 )
-
-    # starting values, using Chen and Fienberg (1974) reccomendation
-    eta_iv <- rowSums( NN ) / sum( NN )
-    p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
-
-    # iterative process
-    v = 0
-    while( v < max.iter ) {
-      # calculate values
-      nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
-      eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
-      p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
-      v     <- v + 1
-    }
-    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
-    mu_ij <- N * nipij
-
-    list( "gross" = mu_ij , "net" = nipij )
-
-  } )
-
-  # decompose list
-  reps <- lapply( lres , function(zz) zz[[flow.type]] )
-  null_reps <- sapply( reps , function(zz) is.null(zz) )
-  reps <- reps[!null_reps]
-  p_var <- rval
-  p_var[,] <- NA
-  for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    qq <- sapply( reps , function(zz) zz[ i , j ] )
-    p_var[i,j] <- survey::svrVar( qq , design$scale , design$rscales[ !null_reps ] , mse = design$mse , coef = rval[i,j] )
-  }
-
-  # format results
-  class(rval) <- "flowstat"
-  attr( rval , "var" ) <- p_var
-  dimnames( attr( rval , "var" ) ) <- dimnames( rval )
-  attr( rval , "statistic" ) <- flow.type
-  attr( rval , "rounds" )    <- rounds
-  attr( rval , "formula" )   <- x
-  rval
-
+  stop( "replicate designs are not supported." )
 }
 
 #' @export

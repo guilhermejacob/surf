@@ -11,7 +11,14 @@
 
 \method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, ...)
 
-\method{svyflow}{survflow.design}(x, design, ...)
+\method{svyflow}{survflow.design}(
+  x,
+  design,
+  flow.type = c("gross", "net"),
+  rounds = c(0, 1),
+  max.iter = 10,
+  ...
+)
 }
 \arguments{
 \item{x}{A formula}
@@ -29,7 +36,7 @@
 \value{
 Objects of class "flowstat", which are tables with a "var" attribute giving the variance and a "statistic" attribute giving the type of flow.
 
-These objects have methods for coef , vcov, SE, and cv.
+These objects have methods for coef, vcov, SE, and cv.
 }
 \description{
 Compute gross flows for data from complex surveys with repeated samples.
@@ -40,26 +47,22 @@ Compute gross flows for data from complex surveys with repeated samples.
 \examples{
 
 # load data
-data( "initial" )
-data( "final" )
+data( "artificial" )
 
-# create survflow design object
+# create surf design object
 flowdes <-
-  svyflowdesign( ids = ~ upa ,
-                 strata = ~ estrato ,
-                 probs = ~ longprob ,
-                 data.list = list( f.qtr , s.qtr ) ,
+  svyflowdesign( ids = ~0 ,
+                 probs = ~ prob ,
+                 data.list = list( dfa0 , dfa1 ) ,
                  nest = TRUE )
 
-# totals
-svytotal( ~factor( vd4002 ) , flowdes , na.rm = TRUE ) # drops observations with missing in any rounds
-svytotal( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 0 ) # drops observations with missing in the first round
-svytotal( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 1 ) # drops observations with missing in the second round
+# gross flows
+gross.flows <- svyflow( ~v0 , design = flowdes , flow.type = "gross" )
+SE( gross.flows )
 
-# means
-svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE ) # drops observations with missing in any rounds
-svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 0 ) # drops observations with missing in the first round
-svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE , which.dataset = 1 ) # drops observations with missing in the second round
+# net flows
+net.flows <- svyflow( ~v0 , design = flowdes , flow.type = "net" )
+SE( net.flows )
 
 }
 \references{
