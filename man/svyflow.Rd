@@ -7,23 +7,9 @@
 \alias{svyflow.survflow.design}
 \title{Summary statistics for repeated sample surveys}
 \usage{
-\method{svyflow}{survey.design2}(
-  x,
-  design,
-  flow.type = c("gross", "net"),
-  rounds = c(0, 1),
-  max.iter = 10,
-  ...
-)
+\method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, ...)
 
-\method{svyflow}{svyrep.design}(
-  x,
-  design,
-  flow.type = c("gross", "net"),
-  rounds = c(0, 1),
-  max.iter = 10,
-  ...
-)
+\method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, ...)
 
 \method{svyflow}{survflow.design}(x, design, ...)
 }
