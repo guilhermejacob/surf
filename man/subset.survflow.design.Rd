@@ -4,14 +4,14 @@
 \alias{subset.survflow.design}
 \title{Subset of survflow}
 \usage{
-\method{subset}{survflow.design}(x, subset, which.round = 0, ...)
+\method{subset}{survflow.design}(x, subset, rounds = 0, ...)
 }
 \arguments{
 \item{x}{a survflow design object}
 
 \item{subset}{An expression specifying the subpopulation}
 
-\item{which.round}{a vector of integers indicating which round to apply subsetting condition. Defaults to \code{which.round = 0}, and the expression is applied to the first round.}
+\item{rounds}{a vector of integers indicating which round to apply subsetting condition. Defaults to \code{rounds = 0}, and the expression is applied to the first round.}
 }
 \description{
 Restrict a survey flow design to a subpopulation, keeping the original survey flow design information about number of clusters, strata.

@@ -38,7 +38,7 @@
 #' # describe object
 #' summary( flowdes )
 #'
-#' @references Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross ows in complex surveys with random nonresponse,
+#' @references Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
 #' Survey Methodology 40(2), pp. 285-321.
 #'
 #' Lumley, Thomas S. (2010). Complex Surveys: A Guide to Analysis Using R. Wiley Publishing.
@@ -46,22 +46,22 @@
 #' @keywords survey
 #'
 #' @export
-svyflowdesign <- function(ids, probs = NULL, strata = NULL, variables = NULL,
-                          fpc = NULL, data.list = NULL, nest = FALSE, check.strata = !nest , weights = NULL ){
+svyflowdesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data.list = NULL, nest = FALSE, check.strata = !nest , weights = NULL ){
 
   # test data input
-  if ( length( data.list ) < 2 ) stop( "`data.list` argument must have at least 2 datasets." )
-  if ( !all( sapply( data.list , class) %in% "data.frame" ) ) stop( "`data.list` argument must be a list of data.frames" )
+  if ( length( data.list ) < 2 ) stop( "data.list argument must have at least 2 datasets." )
+  if ( !all( sapply( data.list , class) %in% "data.frame" ) ) stop( "data.list argument must be a list of data.frames" )
+  if ( length( unique( sapply( data.list , nrow ) ) ) > 1 ) stop( "number of observations varies across data.frames. check pairing." )
 
   # create design on the first dataset
-  res <- survey::svydesign( ids, probs = probs, strata = strata, variables = variables,
-                    fpc = fpc, data= data.list[[1]], nest = nest, check.strata = !nest , weights = weights )
+  res <- survey::svydesign( ids, probs = probs, strata = strata, variables = NULL,
+                            fpc = fpc, data= data.list[[1]], nest = nest, check.strata = !nest , weights = weights )
 
   # correct call
   res$call <- match.call()
 
-  # add data pairs
-  attr( res , "data.pairs" ) <- data.list[-1]
+  # adjusts variables
+  res$variables <- data.list
 
   # change class
   class( res ) <- c( "survflow.design" , class( res ) )

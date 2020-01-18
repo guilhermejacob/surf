@@ -1,6 +1,6 @@
-Package: survflow
+Package: surf
 Type: Package
-Title: Estimation of Flows with Complex Surveys
+Title: Survey-based Flow Estimation
 Version: 0.1.0
 Author: Guilherme Jacob
 Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
@@ -9,6 +9,7 @@ BugReports: https://github.com/guilhermejacob/surveyflow
 Depends:
     R (>= 3.2.1)
 Imports:
+    stats,
     survey,
     methods
 License: GPL-3

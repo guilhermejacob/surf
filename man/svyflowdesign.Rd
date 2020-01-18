@@ -8,7 +8,6 @@ svyflowdesign(
   ids,
   probs = NULL,
   strata = NULL,
-  variables = NULL,
   fpc = NULL,
   data.list = NULL,
   nest = FALSE,
@@ -23,8 +22,6 @@ svyflowdesign(
 
 \item{strata}{Formula or vector specifying strata, use NULL for no strata}
 
-\item{variables}{Formula or data frame specifying the variables measured in the survey. If NULL, the data argument is used.}
-
 \item{fpc}{Finite population correction: see Details below}
 
 \item{data.list}{list of data frames to look up variables in the formula arguments.}
@@ -34,6 +31,8 @@ svyflowdesign(
 \item{check.strata}{If TRUE, check that clusters are nested in strata}
 
 \item{weights}{Formula or vector specifying sampling weights as an alternative to prob. Notice: longitudinal weights.}
+
+\item{variables}{Formula or data frame specifying the variables measured in the survey. If NULL, the data argument is used.}
 }
 \value{
 Object of class "\code{survflow.design}", which are \link[survey]{svydesign} based on the initial survey
@@ -64,10 +63,10 @@ summary( flowdes )
 
 }
 \references{
-Gutierrez, A., Trujillo, L. \& Silva, N. (2014). "The estimation of gross ows in complex surveys with random nonresponse",
+Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
 Survey Methodology 40(2), pp. 285-321.
 
-Lumley, Thomas S. (2010). "Complex Surveys: A Guide to Analysis Using R". Wiley Publishing.
+Lumley, Thomas S. (2010). Complex Surveys: A Guide to Analysis Using R. Wiley Publishing.
 }
 \seealso{
 \code{\link[survey]{svydesign}}

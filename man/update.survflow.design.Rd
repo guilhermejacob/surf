@@ -4,14 +4,14 @@
 \alias{update.survflow.design}
 \title{Add variables to a survflow design}
 \usage{
-\method{update}{survflow.design}(object, which.round = NULL, ...)
+\method{update}{survflow.design}(object, ..., rounds = NULL)
 }
 \arguments{
 \item{object}{a survflow design object}
 
-\item{which.round}{a vector of integers indicating which dataset to be updated. Defaults to \code{which.round = NULL}, and the expression is applied to all datasets.}
-
 \item{...}{Arguments tag=expr add a new variable tag computed by evaluating expr in the survey data}
+
+\item{rounds}{a vector of integers indicating which dataset to be updated. Defaults to \code{rounds = NULL}, and the expression is applied to all datasets.}
 }
 \description{
 Update the data variables in a survflow design, either with a formula for a new set of variables or with an expression for variables to be added.

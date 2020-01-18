@@ -6,7 +6,7 @@
 #'
 #' @param x  a survflow design object
 #' @param subset	 An expression specifying the subpopulation
-#' @param which.round  a vector of integers indicating which round to apply subsetting condition. Defaults to \code{which.round = 0}, and the expression is applied to the first round.
+#' @param rounds  a vector of integers indicating which round to apply subsetting condition. Defaults to \code{rounds = 0}, and the expression is applied to the first round.
 #'
 #' @examples
 #' # load data
@@ -29,28 +29,39 @@
 #'
 #' @export
 subset.survflow.design <-
-  function (x , subset , which.round = 0 , ... ) {
+  function (x , subset , rounds = 0 , ... ) {
 
-    if ( is.null( which.round ) ) which.round <- unique( c( 0 , seq_along( attr( x , "data.pairs") ) ) )
-
-    if ( is.numeric( which.round ) ) {
-
-      which.round <- unique( as.integer( which.round) )
-      if ( !all( which.round %in% c( 0 , seq_along( attr( x , "data.pairs") ) ) ) ) stop( "invalid index; check ?update.survflow.design for examples.")
-
-      for (z in which.round ) {
-
-        e <- substitute(subset)
-        if ( z == 0 ) {
-          r <- eval(e, x$variables, parent.frame())
-        } else {
-          r <- eval(e, attr(x, "data.pairs")[[z]], parent.frame())
-        }
-        r <- r & !is.na(r)
-        x <- x[r, ]
-      }
+    if ( is.null( rounds ) ) rounds <- seq_along( x$variables ) - 1
+    if ( is.numeric( rounds ) ) {
+      rounds <- unique( as.integer( rounds) )
+      if ( !all( rounds %in% c( seq_along( x$variables ) - 1 ) ) ) stop( "invalid index; check ?subset.survflow.design for examples.")
     } else stop( "invalid index; check ?update.survflow.design for examples.")
 
+    if ( "svyrep.design" %in% class(x) ) {
+      e <- substitute( subset )
+      r <- rep( TRUE , nrow( x$variables[[1]] ) )
+      for ( z in rounds ) {
+        s <- eval(e, x$variables[[z+1]], parent.frame())
+        r <- r & s & !is.na(s)
+      }
+      pwt <- x$pweights
+      if (is.data.frame(pwt)) pwt <- pwt[[1]]
+      x$pweights <- pwt[r]
+      x$repweights <- x$repweights[r, , drop = FALSE]
+      if (!is.null(x$selfrep))
+        x$selfrep <- x$selfrep[r]
+      x$variables <- lapply( x$variables , function(zz) zz[r, , drop = FALSE] )
+      x$degf <- NULL
+      x$degf <- survey::degf(x)
+    } else {
+      e <- substitute( subset )
+      r <- rep( TRUE , nrow( x$variables[[1]] ) )
+      for ( z in rounds ) {
+        s <- eval(e, x$variables[[z+1]], parent.frame())
+        r <- r & s & !is.na(s)
+      }
+      x$prob[!r] <- Inf
+    }
     return( x )
 
   }
