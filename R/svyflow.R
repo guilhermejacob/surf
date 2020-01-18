@@ -91,20 +91,19 @@ svyflow.survey.design2 <- function( x , design , flow.type = c( "gross" , "net" 
 
   # starting values, using Chen and Fienberg (1974) reccomendation
   eta_iv <- rowSums( NN ) / sum( NN )
-  p_ijv   <- sweep( NN , 2 , rowSums( NN ) , "/" )
+  p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
 
   # iterative process
   v = 0
   while( v < max.iter ) {
     # calculate values
-    nipij <- sweep( p_ijv , 2 , eta_iv , FUN = "*" )
+    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
     eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
-    p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
-    # add iteration
+    p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
     v     <- v + 1
   }
-  nipij <- sweep( p_ijv , 2 , eta_iv , FUN = "*" )
-  mu_ij <- NN * nipij
+  nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+  mu_ij <- N * nipij
 
   ### variance calculations
 
@@ -141,7 +140,7 @@ svyflow.survey.design2 <- function( x , design , flow.type = c( "gross" , "net" 
   for ( i in seq_len( nrow(NN) ) ) up_ijk[[i]] <- list(NULL)
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
     up_ijk[[i]][[j]] <- nnij_k[[i]][,j] / p_ijv[i,j] + yy[[1]][,i] * (1 - zz[,2]) +
-      yy[[2]][,i] * (1 - zz[,1]) * ( eta_iv[i] * colSums( nipij )[j] ) + (1 - zz[,1]) * (1 - zz[,2]) * eta_iv[i]
+      yy[[2]][,j] * (1 - zz[,1]) * ( eta_iv[i] * colSums( nipij )[j] ) + (1 - zz[,1]) * (1 - zz[,2]) * eta_iv[i]
   }
 
   # j variables
@@ -155,7 +154,7 @@ svyflow.survey.design2 <- function( x , design , flow.type = c( "gross" , "net" 
   jp_ij <- list(NULL)
   for ( i in seq_len( nrow(NN) ) ) jp_ij[[i]] <- list(NULL)
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    jp_ij[[i]][[j]] <- - (1/p_ijv[i,j])^2 * sum( ww * yy[[1]][ , i ] * yy[[2]][ , j ] ) - ( eta_iv[i] / sum( nipij[,j] ) )^2 * sum( ww * yy[[2]][,j] * (1 - zz[,1]) )
+    jp_ij[[i]][[j]] <- - (1/p_ijv[i,j])^2 * sum( ww * yy[[1]][ , i ] * yy[[2]][ , j ] ) - ( eta_iv[i] / rowSums( nipij^2 )[j] ) * sum( ww * yy[[2]][,j] * (1 - zz[,1]) )
   }
 
   # corrects u variables; i.e., u / j
@@ -187,9 +186,9 @@ svyflow.survey.design2 <- function( x , design , flow.type = c( "gross" , "net" 
   }
 
   # format results
-  rval <- if ( flow.type == "gross" ) mu_ij else mu_ij / as.matrix( NN )
+  rval <- if ( flow.type == "gross" ) mu_ij else nipij
   class(rval) <- "flowstat"
-  attr( rval , "var" )       <- if ( flow.type == "gross" ) mu_var else mu_var / as.matrix( NN^2 )
+  attr( rval , "var" )       <- if ( flow.type == "gross" ) mu_var else mu_var / N^2
   dimnames( attr( rval , "var" ) ) <- dimnames( mu_ij )
   attr( rval , "statistic" ) <- flow.type
   attr( rval , "rounds" )    <- rounds
@@ -240,20 +239,19 @@ svyflow.svyrep.design <- function( x , design , flow.type = c( "gross" , "net" )
 
   # starting values, using Chen and Fienberg (1974) reccomendation
   eta_iv <- rowSums( NN ) / sum( NN )
-  p_ijv   <- sweep( NN , 2 , rowSums( NN ) , "/" )
+  p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
 
   # iterative process
   v = 0
   while( v < max.iter ) {
     # calculate values
-    nipij <- sweep( p_ijv , 2 , eta_iv , FUN = "*" )
+    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
     eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
-    p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
-    # add iteration
+    p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
     v     <- v + 1
   }
-  nipij <- sweep( p_ijv , 2 , eta_iv , FUN = "*" )
-  rval <- if ( flow.type == "gross" ) NN * nipij else ( NN * nipij ) / as.matrix( NN )
+  nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+  rval <- if ( flow.type == "gross" ) N * nipij else nipij
 
   ### variance calculations
 
@@ -281,22 +279,21 @@ svyflow.svyrep.design <- function( x , design , flow.type = c( "gross" , "net" )
 
     # starting values, using Chen and Fienberg (1974) reccomendation
     eta_iv <- rowSums( NN ) / sum( NN )
-    p_ijv   <- sweep( NN , 2 , rowSums( NN ) , "/" )
+    p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
 
     # iterative process
     v = 0
     while( v < max.iter ) {
       # calculate values
-      nipij <- sweep( p_ijv , 2 , eta_iv , FUN = "*" )
+      nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
       eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
-      p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
-      # add iteration
+      p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
       v     <- v + 1
     }
-    nipij <- sweep( p_ijv , 2 , eta_iv , FUN = "*" )
-    mu_ij <- NN * nipij
+    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+    mu_ij <- N * nipij
 
-    list( "gross" = mu_ij , "net" = mu_ij / as.matrix( NN ) )
+    list( "gross" = mu_ij , "net" = nipij )
 
   } )
 
@@ -308,7 +305,7 @@ svyflow.svyrep.design <- function( x , design , flow.type = c( "gross" , "net" )
   p_var[,] <- NA
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
     qq <- sapply( reps , function(zz) zz[ i , j] )
-    p_var[i,j] <- survey::svrVar( qq , design$scale , design$rscales[ !null_reps ] , mse = design$mse , coef = mu_ij )
+    p_var[i,j] <- survey::svrVar( qq , design$scale , design$rscales[ !null_reps ] , mse = design$mse , coef = rval )
   }
 
   # format results
