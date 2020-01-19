@@ -1,6 +1,5 @@
-#' @export
-#' @method print survflow.design
-print.survflow.design <-function(x,varnames=TRUE,design.summaries=FALSE,...){
+#' @exportS3Method print surflow.design
+print.surflow.design <-function(x, varnames=TRUE,design.summaries=FALSE,...){
 
   if ( "svyrep.design" %in% class(x) ) {
     cat("Call: ")
@@ -80,10 +79,89 @@ print.survflow.design <-function(x,varnames=TRUE,design.summaries=FALSE,...){
   invisible(x)
 }
 
-#' @export
-#' @method print flowstat
-print.flowstat <- function( object , digits = 0 , ...) {
-  if ( attr( object , "statistic" ) == "gross" ) { object <- round( object , digits = digits ) ; attr( object , "var" ) <- round( attr( object , "var" ) , digits = digits ) }
-  # print( object[,] )
-  printCoefmat( object )
+#' @exportS3Method print flowstat
+print.flowstat <- function( x , digits = 0 , ...) {
+  if ( attr( x , "statistic" ) == "gross" ) { x <- round( x , digits = digits ) ; attr( x , "var" ) <- round( attr( x , "var" ) , digits = digits ) }
+  stats::printCoefmat( x )
+}
+
+#' @exportS3Method summary surflow.design
+summary.surflow.design <-function(object,varnames=TRUE,...){
+
+  if ( "svyrep.design" %in% class(object) ) {
+    cat("Call: ")
+    print(object$call)
+    if (object$type == "Fay")
+      cat("Fay's variance method (rho=", object$rho, ") ")
+    if (object$type == "BRR")
+      cat("Balanced Repeated Replicates ")
+    if (object$type == "JK1")
+      cat("Unstratified cluster jacknife (JK1) ")
+    if (object$type == "JKn")
+      cat("Stratified cluster jackknife (JKn) ")
+    if (object$type == "bootstrap")
+      cat("Survey bootstrap ")
+    if (object$type == "mrbbootstrap")
+      cat("Multistage rescaled bootstrap ")
+    if (object$type == "subbootstrap")
+      cat("(n-1) bootstrap ")
+    nweights <- ncol(object$repweights)
+    cat("with", nweights, "replicates")
+    if (!is.null(object$mse) && object$mse)
+      cat(" and MSE variances")
+    cat(".\n")
+  } else {
+    n<-NROW(object$cluster)
+    if (object$has.strata) cat("Stratified ")
+    un<-length(unique(object$cluster[,1]))
+    if(n==un){
+      cat("Independent Sampling design")
+      is.independent<-TRUE
+      if (is.null(object$fpc$popsize))
+        cat(" (with replacement)\n")
+      else cat("\n")
+    } else {
+      cat(NCOL(object$cluster),"- level Cluster Sampling design")
+      if (is.null(object$fpc$popsize))
+        cat(" (with replacement)\n")
+      else cat("\n")
+      nn<-lapply(object$cluster,function(i) length(unique(i)))
+      cat(paste("With (",paste(unlist(nn),collapse=", "),") clusters.\n",sep=""))
+      is.independent<-FALSE
+    }
+
+    print(object$call)
+    if (TRUE){
+      cat("Probabilities:\n")
+      print(summary(object$prob))
+      if(object$has.strata){
+        if (NCOL(object$cluster)>1)
+          cat("First-level ")
+        cat("Stratum Sizes: \n")
+        oo<-order(unique(object$strata[,1]))
+        a<-rbind(obs=table(object$strata[,1]),
+                 design.PSU=object$fpc$sampsize[!duplicated(object$strata[,1]),1][oo],
+                 actual.PSU=table(object$strata[!duplicated(object$cluster[,1]),1]))
+        print(a)
+      }
+      if (!is.null(object$fpc$popsize)){
+        if (object$has.strata) {
+          cat("Population stratum sizes (PSUs): \n")
+          s<-!duplicated(object$strata[,1])
+          a<-object$fpc$popsize[s,1]
+          names(a)<-object$strata[s,1]
+          a<-a[order(names(a))]
+          print(a)
+        } else {
+          cat("Population size (PSUs):",object$fpc$popsize[1,1],"\n")
+        }
+      }
+    }
+  }
+  cat("Number of repetitions:", length( object$variables ) - 1 , "\n" )
+  if (varnames){
+    cat("Data variables:\n")
+    print( Reduce( intersect , sapply( object$variables , colnames ) ) )
+  }
+  invisible(object)
 }

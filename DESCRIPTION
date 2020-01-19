@@ -7,15 +7,16 @@ Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
 Description: Gross and net flow estimation with complex surveys based on Rojas (2014).
 BugReports: https://github.com/guilhermejacob/surveyflow
 Depends:
-    R (>= 3.2.1)
-Imports:
+    R (>= 3.2.1),
     stats,
-    survey,
+    survey
+Imports:
     methods
 License: GPL-3
 LazyData: true
 Suggests:
     testthat,
+    sampling,
     knitr,
     rmarkdown
 RoxygenNote: 7.0.2

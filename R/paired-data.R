@@ -18,7 +18,7 @@
 
 #' @title Artificial datasets
 #'
-#' @description Artificial paired datasets, obtained using a SRSWOR from a pseudo-population of 1 000 000 individuals.
+#' @description Artificial paired datasets, obtained using a SRSWOR from a pseudo-population of 100 000 individuals.
 #'
 #' @docType data
 #'

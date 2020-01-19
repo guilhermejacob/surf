@@ -1,29 +1,13 @@
-##' @importFrom stats coef
-##' @export
-stats::coef
-##' @method coef flowstat
-##' @export
+#' @exportS3Method coef flowstat
 coef.flowstat <- function( object , ... ) object[,]
 
-##' @importFrom stats vcov
-##' @export
-stats::vcov
-##' @method vcov flowstat
-##' @export
+#' @exportS3Method vcov flowstat
 vcov.flowstat <- function( object , ... ) attr( object , "var" )
 
-# flowstat SE method
-##' @importFrom survey SE
-##' @export
-survey::SE
-##' @method SE flowstat
-##' @export
+#' @importFrom survey SE
+#' @exportS3Method SE flowstat
 SE.flowstat <- function( object , ... ) sqrt( attr( object , "var" ) )
 
-# flowstat cv method
-##' @importFrom survey cv
-##' @export
-survey::cv
-##' @method cv flowstat
-##' @export
+#' @importFrom survey cv
+#' @exportS3Method  cv flowstat
 cv.flowstat <- function( object , ... ) SE.flowstat( object ) / coef.flowstat(object)

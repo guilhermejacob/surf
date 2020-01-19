@@ -1,41 +1,37 @@
-#' Subset of survflow
+#' Subset of surflow
 #'
 #' Restrict a survey flow design to a subpopulation, keeping the original survey flow design information about number of clusters, strata.
 #'
-#' @method subset survflow.design
-#'
-#' @param x  a survflow design object
+#' @param x  a surflow design object
 #' @param subset	 An expression specifying the subpopulation
 #' @param rounds  a vector of integers indicating which round to apply subsetting condition. Defaults to \code{rounds = 0}, and the expression is applied to the first round.
+#' @param ...  future expansion
 #'
 #' @examples
 #' # load data
-#' data( "initial" )
-#' data( "final" )
+#' data( "artificial" )
 #'
-#' # create survflow design object
+#' # create surflow design object
 #' flowdes <-
-#'   svyflowdesign( ids = ~ upa ,
-#'                  strata = ~ estrato ,
-#'                  probs = ~ longprob ,
-#'                  data.list = list( f.qtr , s.qtr ) ,
-#'                  nest = TRUE )
+#'   sfydesign( ids = ~ upa ,
+#'              probs = ~ longprob ,
+#'              strata = ~ estrato ,
+#'              data.list = list( dfr0 , dfr1 ) ,
+#'              nest = TRUE )
 #'
 #' # subset
 #' flowdes <- subset( flowdes , v2007 == 1 )
 #'
-#' # means
-#' svymean( ~factor( vd4002 ) , flowdes , na.rm = TRUE ) # drops observations with missing in any rounds
-#'
+#' @method subset surflow.design
 #' @export
-subset.survflow.design <-
+subset.surflow.design <-
   function (x , subset , rounds = 0 , ... ) {
 
     if ( is.null( rounds ) ) rounds <- seq_along( x$variables ) - 1
     if ( is.numeric( rounds ) ) {
       rounds <- unique( as.integer( rounds) )
-      if ( !all( rounds %in% c( seq_along( x$variables ) - 1 ) ) ) stop( "invalid index; check ?subset.survflow.design for examples.")
-    } else stop( "invalid index; check ?update.survflow.design for examples.")
+      if ( !all( rounds %in% c( seq_along( x$variables ) - 1 ) ) ) stop( "invalid index; check ?subset.surflow.design for examples.")
+    } else stop( "invalid index; check ?update.surflow.design for examples.")
 
     if ( "svyrep.design" %in% class(x) ) {
       e <- substitute( subset )

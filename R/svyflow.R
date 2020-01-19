@@ -4,7 +4,7 @@
 #' @description Compute gross flows for data from complex surveys with repeated samples.
 #'
 #' @param x  A formula
-#' @param design  survflow.design object
+#' @param design  surflow.design object
 #' @param flow.type  type of flow to estimate: "gross" for counts and "net" for probabilities. Defaults to \code{flow.type = "gross"}.
 #' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param max.iter  number of iterations. Defaults to \code{max.iter = 10}.
@@ -31,7 +31,7 @@
 #'
 #' # create surf design object
 #' flowdes <-
-#'   svyflowdesign( ids = ~0 ,
+#'   sfydesign( ids = ~0 ,
 #'                  probs = ~ prob ,
 #'                  data.list = list( dfa0 , dfa1 ) ,
 #'                  nest = TRUE )
@@ -55,7 +55,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   design$variables <- lapply( design$variables , function( zz ) {rownames(zz) <- seq_len( nrow(zz)) ; zz} )
 
   # collect data
-  xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = na.pass ) )
+  xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
   xx <- do.call( cbind , xx )
 
   # test column format
@@ -68,7 +68,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   ww <- 1 / design$prob
 
   # aggregate
-  NN <- xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE )
+  NN <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE )
   RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
   CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
@@ -103,7 +103,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 
   # yy matrix
   yy <- lapply( seq_len( ncol( xx ) ) , function( j ) {
-    kk <- model.matrix( ~-1+. , data = xx[,j,drop = FALSE] , contrasts.arg = lapply( xx[ , j, drop = FALSE ] , contrasts, contrasts=FALSE ) , na.action = na.pass )
+    kk <- stats::model.matrix( ~-1+. , data = xx[,j,drop = FALSE] , contrasts.arg = lapply( xx[ , j, drop = FALSE ] , stats::contrasts, contrasts=FALSE ) , na.action = stats::na.pass )
     oo <- matrix( 0 , nrow = nrow(xx) , ncol = ncol(kk) , dimnames = list( seq_len( nrow(xx) ) , colnames( kk) ) )
     oo[ match( rownames( kk ) , rownames( oo ) ) , ] <- kk
     oo
@@ -187,8 +187,9 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 
   # format results
   rval <- if ( flow.type == "gross" ) mu_ij else nipij
+  rval <- as.table(rval)
   class(rval) <- "flowstat"
-  attr( rval , "var" )       <- mu_var
+  attr( rval , "var" )       <- as.table(mu_var)
   dimnames( attr( rval , "var" ) ) <- dimnames( mu_ij )
   attr( rval , "statistic" ) <- flow.type
   attr( rval , "rounds" )    <- rounds
@@ -201,16 +202,126 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 #' @rdname svyflow
 #' @method svyflow svyrep.design
 svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , ... ){
-  stop( "replicate designs are not supported." )
+
+  # collect data
+  xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
+  xx <- do.call( cbind , xx )
+
+  # test column format
+  if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
+
+  # add time frame
+  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
+
+  # collect weights
+  ww <- stats::weights( design , "sampling" )
+
+  # aggregate
+  NN <- stats::xtabs( ww ~ . , data = xx , addNA = TRUE )
+  RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
+  CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
+  MM <- NN[ nrow( NN ) , ncol( NN ) ]
+  NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
+  N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
+  if ( any( NN <= 0 ) ) stop( "Some flows are equal to zero.")
+
+  # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
+  psi <- ( sum( NN ) + sum( RR ) ) / N
+  rhoRR <- sum( NN ) / ( sum( NN ) + sum( RR ) )
+  rhoMM <- MM / (sum( CC ) + MM )
+
+  ### maximum pseudo-likelihood estimates for eta_i and p_ij (Rojas et al., 2014, p.296 , Result 4.3 )
+
+  # starting values, using Chen and Fienberg (1974) reccomendation
+  eta_iv <- rowSums( NN ) / sum( NN )
+  p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
+
+  # iterative process
+  v = 0
+  while( v < max.iter ) {
+    # calculate values
+    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+    eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
+    p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
+    v     <- v + 1
+  }
+  nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+  rval <- if ( flow.type == "gross" ) N * nipij else nipij
+
+  ### variance calculations
+
+  # get replication weights
+  wr <- stats::weights( design , "analysis" )
+
+  # calculate replicates
+  lres <- lapply( seq_len(ncol(wr)) , function( zz ) {
+
+    # aggregate
+    NN <- stats::xtabs( wr[,zz] ~ . , data = xx , addNA = TRUE )
+    RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
+    CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
+    MM <- NN[ nrow( NN ) , ncol( NN ) ]
+    NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
+    N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
+    if ( any( NN <= 0 ) ) return( NULL )
+
+    # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
+    psi <- ( sum( NN ) + sum( RR ) ) / N
+    rhoRR <- sum( NN ) / ( sum( NN ) + sum( RR ) )
+    rhoMM <- MM / (sum( CC ) + MM )
+
+    ### maximum pseudo-likelihood estimates for eta_i and p_ij (Rojas et al., 2014, p.296 , Result 4.3 )
+
+    # starting values, using Chen and Fienberg (1974) reccomendation
+    eta_iv <- rowSums( NN ) / sum( NN )
+    p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
+
+    # iterative process
+    v = 0
+    while( v < max.iter ) {
+      # calculate values
+      nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+      eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
+      p_ijv <- sweep( NN + sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij , 2 , CC / colSums( nipij ) , "*" ) ) , "/" )
+      v     <- v + 1
+    }
+    nipij <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+    mu_ij <- N * nipij
+
+    list( "gross" = mu_ij , "net" = nipij )
+
+  } )
+
+  # decompose list
+  reps <- lapply( lres , function(zz) zz[[flow.type]] )
+  null_reps <- sapply( reps , function(zz) is.null(zz) )
+  reps <- reps[!null_reps]
+  p_var <- NN
+  p_var[,] <- NA
+  for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
+    qq <- sapply( reps , function(zz) zz[ i , j ] )
+    p_var[i,j] <- survey::svrVar( qq , design$scale , design$rscales[ !null_reps ] , mse = design$mse , coef = rval[i,j] )
+  }
+
+  # format results
+  rval <- as.table(rval)
+  class(rval) <- "flowstat"
+  attr( rval , "var" ) <- p_var
+  dimnames( attr( rval , "var" ) ) <- dimnames( rval )
+  attr( rval , "statistic" ) <- flow.type
+  attr( rval , "rounds" )    <- rounds
+  attr( rval , "formula" )   <- x
+  rval
+
 }
 
 #' @export
 #' @rdname svyflow
-#' @method svyflow survflow.design
-svyflow.survflow.design <- function( x , design , flow.type = c( "gross" , "net" ) , rounds = c(0,1) , max.iter = 10 , ... ) {
-  flow.type <- match.arg( flow.type )
+#' @method svyflow surflow.design
+svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , ... ) {
+  flow.type <- match.arg( flow.type , c( "gross" , "net" ) )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-  NextMethod( "svyflow" , design = design , flowtype , rounds , max.iter , ... )
+  NextMethod( "svyflow" , design = design , flow.type = flow.type , rounds = rounds , max.iter = max.iter , ... )
 }
 
 #' @export

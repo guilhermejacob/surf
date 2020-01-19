@@ -4,26 +4,19 @@
 \alias{svyflow}
 \alias{svyflow.survey.design2}
 \alias{svyflow.svyrep.design}
-\alias{svyflow.survflow.design}
+\alias{svyflow.surflow.design}
 \title{Summary statistics for repeated sample surveys}
 \usage{
 \method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, ...)
 
 \method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, ...)
 
-\method{svyflow}{survflow.design}(
-  x,
-  design,
-  flow.type = c("gross", "net"),
-  rounds = c(0, 1),
-  max.iter = 10,
-  ...
-)
+\method{svyflow}{surflow.design}(x, design, flow.type = NULL, rounds = c(0, 1), max.iter = 10, ...)
 }
 \arguments{
 \item{x}{A formula}
 
-\item{design}{survflow.design object}
+\item{design}{surflow.design object}
 
 \item{flow.type}{type of flow to estimate: "gross" for counts and "net" for probabilities. Defaults to \code{flow.type = "gross"}.}
 
@@ -51,7 +44,7 @@ data( "artificial" )
 
 # create surf design object
 flowdes <-
-  svyflowdesign( ids = ~0 ,
+  sfydesign( ids = ~0 ,
                  probs = ~ prob ,
                  data.list = list( dfa0 , dfa1 ) ,
                  nest = TRUE )

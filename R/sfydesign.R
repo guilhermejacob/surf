@@ -5,7 +5,7 @@
 #' @param ids 	Formula or data frame specifying cluster ids from largest level to smallest level, ~0 or ~1 is a formula for no clusters.
 #' @param probs	 Formula or data frame specifying cluster sampling probabilities
 #' @param strata  Formula or vector specifying strata, use NULL for no strata
-#' @param fpc  Finite population correction: see Details below
+#' @param fpc  Finite population correction: see Details in \link[survey]{svydesign}.
 #' @param weights	 Formula or vector specifying sampling weights as an alternative to prob. Notice: longitudinal weights.
 #' @param data.list	 list of data frames to look up variables in the formula arguments.
 #' @param nest  If TRUE, relabel cluster ids to enforce nesting within strata
@@ -16,8 +16,8 @@
 #'
 #' The first \code{data.frame} in \code{data.list} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
 #'
-#' @return Object of class "\code{survflow.design}", which are \link[survey]{svydesign} with
-#' a \code{data.pairs} attribute containing the data for subsequent surveys.
+#' @return Object of class \code{surflow.design}, which are \link[survey]{svydesign} with
+#' a \code{data.list} attribute containing the data for each survey round.
 #'
 #' @author Guilherme Jacob
 #'
@@ -25,15 +25,13 @@
 #'
 #' @examples
 #' # load data
-#' data( "initial" )
-#' data( "final" )
+#' data( "artificial" )
 #'
-#' # create survflow design object
+#' # create surflow design object
 #' flowdes <-
-#' svyflowdesign( ids = ~ upa ,
-#'                strata = ~ estrato ,
-#'                probs = ~ longprob ,
-#'                data.list = list( f.qtr , s.qtr ) ,
+#' sfydesign( ids = ~ 1 ,
+#'                probs = ~ prob ,
+#'                data.list = list( dfa0 , dfa1 ) ,
 #'                nest = TRUE )
 #'
 #' # describe object
@@ -47,9 +45,9 @@
 #' @keywords survey
 #'
 #' @export
-svyflowdesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data.list = NULL, nest = FALSE, check.strata = !nest , weights = NULL ){
+sfydesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data.list = NULL, nest = FALSE, check.strata = !nest , weights = NULL ){
 
-  # test data input
+  # test input
   if ( length( data.list ) < 2 ) stop( "data.list argument must have at least 2 datasets." )
   if ( !all( sapply( data.list , class) %in% "data.frame" ) ) stop( "data.list argument must be a list of data.frames" )
   if ( length( unique( sapply( data.list , nrow ) ) ) > 1 ) stop( "number of observations varies across data.frames. check pairing." )
@@ -65,7 +63,7 @@ svyflowdesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data.lis
   res$variables <- data.list
 
   # change class
-  class( res ) <- c( "survflow.design" , class( res ) )
+  class( res ) <- c( "surflow.design" , class( res ) )
 
   # return object
   return( res )
