@@ -58,10 +58,12 @@ flowdes <-
 
 # gross flows
 gross.flows <- svyflow( ~v0 , design = flowdes , flow.type = "gross" )
+coef( gross.flows )
 SE( gross.flows )
 
 # net flows
 net.flows <- svyflow( ~v0 , design = flowdes , flow.type = "net" )
+coef( net.flows )
 SE( net.flows )
 
 }

@@ -17,9 +17,6 @@ LazyData: true
 Suggests:
     testthat,
     knitr,
-    rmarkdown,
-    DBI,
-    RODBC,
-    RSQLite
+    rmarkdown
 RoxygenNote: 7.0.2
 Encoding: UTF-8
