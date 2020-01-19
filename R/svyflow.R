@@ -149,15 +149,15 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     jp_ij[[i]][[j]] <- - 1/(p_ijv[i,j]^2) * sum( ww * nnij_k[[i]][[j]] ) - ( ( eta_iv[i] / colSums( nipij )[j] )^2 ) * sum( ww * yy[[2]][,j] * (1 - zz[,1] ) )
   }
 
-  # variance of eta and p-matrix
-  eta_var <- survey::svyrecvar( ww * ueta_ik , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-  eta_var <- diag(eta_var) / jeta_i^2
-  p_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
-  for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    p_var[i,j] <- survey::svyrecvar( ww * up_ijk[[i]][[j]] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    p_var[i,j] <- p_var[i,j] / jp_ij[[i]][[j]]^2
-  }
-
+  # # variance of eta and p-matrix
+  # eta_var <- survey::svyrecvar( ww * ueta_ik , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  # eta_var <- diag(eta_var) / jeta_i^2
+  # p_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
+  # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
+  #   p_var[i,j] <- survey::svyrecvar( ww * up_ijk[[i]][[j]] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  #   p_var[i,j] <- p_var[i,j] / jp_ij[[i]][[j]]^2
+  # }
+  #
   # # variance of NN
   # NNvar <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
   # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
