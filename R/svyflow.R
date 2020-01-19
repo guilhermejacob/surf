@@ -149,12 +149,6 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     jp_ij[[i]][[j]] <- - 1/(p_ijv[i,j]^2) * sum( ww * nnij_k[[i]][[j]] ) - ( ( eta_iv[i] / colSums( nipij )[j] )^2 ) * sum( ww * yy[[2]][,j] * (1 - zz[,1] ) )
   }
 
-  # variance of NN
-  NNvar <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
-  for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    NNvar[i,j] <- survey::svyrecvar( ww * nnij_k[[i]][[j]] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-  }
-
   # variance of eta and p-matrix
   eta_var <- survey::svyrecvar( ww * ueta_ik , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
   eta_var <- diag(eta_var) / jeta_i^2
@@ -164,19 +158,37 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     p_var[i,j] <- p_var[i,j] / jp_ij[[i]][[j]]^2
   }
 
-  # a variables
+  # # variance of NN
+  # NNvar <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
+  # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
+  #   NNvar[i,j] <- survey::svyrecvar( ww * nnij_k[[i]][[j]] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  # }
+  #
+  # # a variables
+  # mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
+  # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
+  #   a7 <- nipij[i,j]
+  #   a8 <- NN[i,j] * p_ijv[i,j]
+  #   a9 <- NN[i,j] * eta_iv[i]
+  #   mu_var[i,j] <- (a7^2) * NNvar[i,j] + (a8^2) * eta_var[i] + (a9^2) * p_var[i,j]
+  # }
+
+  # alternative strategy
   mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    a7 <- nipij[i,j]
-    a8 <- NN[i,j] * p_ijv[i,j]
-    a9 <- NN[i,j] * eta_iv[i]
-    mu_var[i,j] <- (a7^2) * NNvar[i,j] + (a8^2) * eta_var[i] + (a9^2) * p_var[i,j]
+    nipij_k <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[[i]] ) + eta_iv[i] * ( up_ijk[[i]][[j]] / jp_ij[[i]][[j]] )
+    muij_k <- nipij[i,j] * vv_k + N * nipij_k
+    mu_var[i,j] <- if ( flow.type == "gross" ) {
+      survey::svyrecvar( ww * muij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    } else {
+      survey::svyrecvar( ww * nipij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    }
   }
 
   # format results
   rval <- if ( flow.type == "gross" ) mu_ij else nipij
   class(rval) <- "flowstat"
-  attr( rval , "var" )       <- if ( flow.type == "gross" ) mu_var else mu_var / NN^2
+  attr( rval , "var" )       <- mu_var
   dimnames( attr( rval , "var" ) ) <- dimnames( mu_ij )
   attr( rval , "statistic" ) <- flow.type
   attr( rval , "rounds" )    <- rounds
