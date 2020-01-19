@@ -10,14 +10,10 @@ Depends:
     R (>= 3.2.1),
     stats,
     survey
-Imports:
-    methods
 License: GPL-3
 LazyData: true
 Suggests:
     testthat,
-    sampling,
-    knitr,
-    rmarkdown
+    sampling
 RoxygenNote: 7.0.2
 Encoding: UTF-8

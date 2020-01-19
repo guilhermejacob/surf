@@ -1,0 +1,16 @@
+# R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
+
+language: r
+r:
+  - release
+  - devel
+dist: trusty
+sudo: true
+
+script:
+  - |
+    R CMD build .
+    travis_wait 60 R CMD check surf*tar.gz
+
+after_failure:
+  - find *Rcheck -name '*.fail' -print -exec cat '{}' \;
