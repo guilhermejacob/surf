@@ -80,7 +80,7 @@ print.surflow.design <-function(x, varnames=TRUE,design.summaries=FALSE,...){
 }
 
 #' @exportS3Method print flowstat
-print.flowstat <- function( x , ... , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) ) {
+print.flowstat <- function( x , ... , digits = ifelse( attr( x , "statistic" ) == "gross" , 2 , 4 ) ) {
   stats::printCoefmat( x , digits = digits )
 }
 
