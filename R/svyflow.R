@@ -69,7 +69,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   ww <- 1 / design$prob
 
   # aggregate
-  NN <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE )
+  NN <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
   RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
   CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
@@ -217,7 +217,7 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   ww <- stats::weights( design , "sampling" )
 
   # aggregate
-  NN <- stats::xtabs( ww ~ . , data = xx , addNA = TRUE )
+  NN <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
   RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
   CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
@@ -256,7 +256,7 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   lres <- lapply( seq_len(ncol(wr)) , function( zz ) {
 
     # aggregate
-    NN <- stats::xtabs( wr[,zz] ~ . , data = xx , addNA = TRUE )
+    NN <- stats::xtabs( c(wr[,zz],0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
     RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
     CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
     MM <- NN[ nrow( NN ) , ncol( NN ) ]
