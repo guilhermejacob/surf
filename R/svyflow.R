@@ -113,7 +113,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   zz <- apply( xx , 2 , function(z) as.numeric( !is.na(z) ) )
 
   ### special variables
-  vv_k <- rowSums( yy[[1]] ) * rowSums( yy[[2]] ) + rowSums( yy[[2]] * (1 - zz[,1]) ) + rowSums( yy[[1]] * (1 - zz[,2]) )
+  vv_k <- rowSums( yy[[1]] ) * rowSums( yy[[2]] ) + rowSums( yy[[2]] * (1 - zz[,1]) ) + rowSums( yy[[1]] * (1 - zz[,2]) ) + ( 1- zz[,1] ) * ( 1- zz[,2] )
   nnij_k <- list(NULL)
   for ( i in seq_len( nrow(NN) ) ) nnij_k[[i]] <- list(NULL)
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) nnij_k[[i]][[j]] <- yy[[1]][,i] * yy[[2]][,j]
@@ -174,14 +174,18 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   # }
 
   # alternative strategy
-  mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
+  nipij_k <- array( NA, dim = c( length( vv_k ) , nrow( NN ) , ncol( NN ) ) )
+  muij_k <- array( NA, dim = c( length( vv_k ) , nrow( NN ) , ncol( NN ) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    nipij_k <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[[i]] ) + eta_iv[i] * ( up_ijk[[i]][[j]] / jp_ij[[i]][[j]] )
+    nipij_k[,i,j] <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[[i]] ) + eta_iv[i] * ( up_ijk[[i]][[j]] / jp_ij[[i]][[j]] )
     muij_k <- nipij[i,j] * vv_k + N * nipij_k
-    mu_var[i,j] <- if ( flow.type == "gross" ) {
-      survey::svyrecvar( ww * muij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  }
+  mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
+  for ( i in seq_len( nrow(NN) ) ) {
+    if ( flow.type == "gross" ) {
+      mu_var[i,] <- diag( survey::svyrecvar( ww * muij_k[,i,] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
     } else {
-      survey::svyrecvar( ww * nipij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+      mu_var[i,] <- diag( survey::svyrecvar( ww * nipij_k[,i,] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
     }
   }
 
