@@ -33,9 +33,5 @@ test_that("outputs",{
   expect_is(SE(nflow_lin),"table")
   expect_is(SE(gflow_rep),"table")
   expect_is(SE(nflow_rep),"table")
-  # expect_gte(confint(a1)[2],coef(a1))
-  # expect_gte(confint(b1)[2], coef(b1))
-  # expect_lte(confint(a1)[1], coef(a1))
-  # expect_lte(confint(b1)[,1], coef(b1))
 })
 
