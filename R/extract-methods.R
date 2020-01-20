@@ -1,5 +1,12 @@
 #' @exportS3Method coef flowstat
-coef.flowstat <- function( object , ... ) object[,]
+coef.flowstat <- function( object , ... ) {
+  attr(object, "statistic") <- NULL
+  attr(object, "deff") <- NULL
+  attr(object, "var") <- NULL
+  attr(object, "rounds") <- NULL
+  attr(object, "formula") <- NULL
+  unclass(object)
+}
 
 #' @exportS3Method vcov flowstat
 vcov.flowstat <- function( object , ... ) attr( object , "var" )

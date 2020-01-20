@@ -75,7 +75,6 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
   NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
   N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
-  if ( any( NN <= 0 ) ) stop( "Some flows are equal to zero.")
 
   # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
   psi <- ( sum( NN ) + sum( RR ) ) / N
@@ -224,7 +223,6 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
   NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
   N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
-  if ( any( NN <= 0 ) ) stop( "Some flows are equal to zero.")
 
   # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
   psi <- ( sum( NN ) + sum( RR ) ) / N
@@ -264,7 +262,6 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
     MM <- NN[ nrow( NN ) , ncol( NN ) ]
     NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
     N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
-    if ( any( NN <= 0 ) ) return( NULL )
 
     # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
     psi <- ( sum( NN ) + sum( RR ) ) / N
