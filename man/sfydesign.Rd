@@ -4,16 +4,8 @@
 \alias{sfydesign}
 \title{Flow estimation using complex surveys}
 \usage{
-sfydesign(
-  ids,
-  probs = NULL,
-  strata = NULL,
-  fpc = NULL,
-  data.list = NULL,
-  nest = FALSE,
-  check.strata = !nest,
-  weights = NULL
-)
+sfydesign( ids, probs=NULL, strata=NULL, fpc=NULL, data=NULL, nest=FALSE,
+check.strata = !nest, weights=NULL, pps=FALSE,...)
 }
 \arguments{
 \item{ids}{Formula or data frame specifying cluster ids from largest level to smallest level, ~0 or ~1 is a formula for no clusters.}
@@ -24,26 +16,33 @@ sfydesign(
 
 \item{fpc}{Finite population correction: see Details in \link[survey]{svydesign}.}
 
-\item{data.list}{list of data frames to look up variables in the formula arguments.}
+\item{data}{list of data frames to look up variables in the formula arguments.}
 
 \item{nest}{If TRUE, relabel cluster ids to enforce nesting within strata}
 
 \item{check.strata}{If TRUE, check that clusters are nested in strata}
 
 \item{weights}{Formula or vector specifying sampling weights as an alternative to prob. Notice: longitudinal weights.}
+
+\item{pps}{\code{"brewer"} to use Brewer's approximation for PPS sampling without replacement.
+\code{"overton"} to use Overton's approximation. An object of class \link[survey]{HR} to use the Hartley-Rao approximation.
+An object of class \link[survey]{ppsmat} to use the Horvitz-Thompson estimator.}
+
+\item{...}{for future expansion. See \link[survey]{svydesign} for mor information.}
 }
 \value{
 Object of class \code{surflow.design}, which are \link[survey]{svydesign} with
-a \code{data.list} attribute containing the data for each survey round.
+a \code{data} attribute containing the data for each survey round.
 }
 \description{
 Specify a complex survey design for flow estimation.
 }
 \details{
 The arguments of this function are those of \code{\link[survey]{svydesign}},
-except for the \code{data.list}, which is a list of \code{data.frames}.
+except for the \code{data}, which, in this case, is a list of \code{data.frames} with \emph{paired observations}; i.e., each
+row must refer to the same individual across datasets.
 
-The first \code{data.frame} in \code{data.list} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
+The first \code{data.frame} in \code{data} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
 }
 \examples{
 # load data
@@ -53,7 +52,7 @@ data( "artificial" )
 flowdes <-
 sfydesign( ids = ~ 1 ,
                probs = ~ prob ,
-               data.list = list( dfa0 , dfa1 ) ,
+               data = list( dfa0 , dfa1 ) ,
                nest = TRUE )
 
 # describe object
@@ -61,10 +60,11 @@ summary( flowdes )
 
 }
 \references{
-Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
-Survey Methodology 40(2), pp. 285-321.
+ROJAS, H. A. G.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
+\emph{Survey Methodology}, v. 40, n. 2, p. 285–321, dec. 2014. URL \url{https://www150.statcan.gc.ca/n1/en/catalogue/12-001-X201400214113}.
 
-Lumley, Thomas S. (2010). Complex Surveys: A Guide to Analysis Using R. Wiley Publishing.
+LUMLEY, T. \emph{Complex Surveys:} A guide to analysis using R.
+Hoboken: John Wiley & Sons, 2010. (Wiley Series in Survey Methodology). ISBN 978-0-470-28430-8.
 }
 \seealso{
 \code{\link[survey]{svydesign}}

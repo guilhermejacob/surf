@@ -4,7 +4,7 @@ context("flow output")
 flowdes <-
   sfydesign( ids = ~0 ,
              probs = ~ prob ,
-             data.list = list( dfa0 , dfa1 ) ,
+             data = list( dfa0 , dfa1 ) ,
              nest = TRUE )
 
 # create replicate design

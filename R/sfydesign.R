@@ -1,23 +1,31 @@
-#' Flow estimation using complex surveys
+#' @title Flow estimation using complex surveys
 #'
-#' Specify a complex survey design for flow estimation.
+#' @description Specify a complex survey design for flow estimation.
+#'
+#' @usage sfydesign( ids, probs=NULL, strata=NULL, fpc=NULL, data=NULL, nest=FALSE,
+#' check.strata = !nest, weights=NULL, pps=FALSE,...)
 #'
 #' @param ids 	Formula or data frame specifying cluster ids from largest level to smallest level, ~0 or ~1 is a formula for no clusters.
 #' @param probs	 Formula or data frame specifying cluster sampling probabilities
 #' @param strata  Formula or vector specifying strata, use NULL for no strata
 #' @param fpc  Finite population correction: see Details in \link[survey]{svydesign}.
 #' @param weights	 Formula or vector specifying sampling weights as an alternative to prob. Notice: longitudinal weights.
-#' @param data.list	 list of data frames to look up variables in the formula arguments.
+#' @param data	 list of data frames to look up variables in the formula arguments.
 #' @param nest  If TRUE, relabel cluster ids to enforce nesting within strata
 #' @param check.strata	 If TRUE, check that clusters are nested in strata
+#' @param pps	 \code{"brewer"} to use Brewer's approximation for PPS sampling without replacement.
+#' \code{"overton"} to use Overton's approximation. An object of class \link[survey]{HR} to use the Hartley-Rao approximation.
+#' An object of class \link[survey]{ppsmat} to use the Horvitz-Thompson estimator.
+#' @param ...  for future expansion. See \link[survey]{svydesign} for mor information.
 #'
 #' @details The arguments of this function are those of \code{\link[survey]{svydesign}},
-#' except for the \code{data.list}, which is a list of \code{data.frames}.
+#' except for the \code{data}, which, in this case, is a list of \code{data.frames} with \emph{paired observations}; i.e., each
+#' row must refer to the same individual across datasets.
 #'
-#' The first \code{data.frame} in \code{data.list} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
+#' The first \code{data.frame} in \code{data} must contain the survey design information columns; i.e., clusters, strata, sampling probabilities, etc.
 #'
 #' @return Object of class \code{surflow.design}, which are \link[survey]{svydesign} with
-#' a \code{data.list} attribute containing the data for each survey round.
+#' a \code{data} attribute containing the data for each survey round.
 #'
 #' @author Guilherme Jacob
 #'
@@ -31,36 +39,38 @@
 #' flowdes <-
 #' sfydesign( ids = ~ 1 ,
 #'                probs = ~ prob ,
-#'                data.list = list( dfa0 , dfa1 ) ,
+#'                data = list( dfa0 , dfa1 ) ,
 #'                nest = TRUE )
 #'
 #' # describe object
 #' summary( flowdes )
 #'
-#' @references Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
-#' Survey Methodology 40(2), pp. 285-321.
+#' @references ROJAS, H. A. G.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
+#' \emph{Survey Methodology}, v. 40, n. 2, p. 285–321, dec. 2014. URL \url{https://www150.statcan.gc.ca/n1/en/catalogue/12-001-X201400214113}.
 #'
-#' Lumley, Thomas S. (2010). Complex Surveys: A Guide to Analysis Using R. Wiley Publishing.
+#' LUMLEY, T. \emph{Complex Surveys:} A guide to analysis using R.
+#' Hoboken: John Wiley & Sons, 2010. (Wiley Series in Survey Methodology). ISBN 978-0-470-28430-8.
 #'
 #' @keywords survey
 #'
 #' @export
-sfydesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data.list = NULL, nest = FALSE, check.strata = !nest , weights = NULL ){
+sfydesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data = NULL, nest = FALSE, check.strata = !nest , weights = NULL, pps=FALSE, ... ){
 
   # test input
-  if ( length( data.list ) < 2 ) stop( "data.list argument must have at least 2 datasets." )
-  if ( !all( sapply( data.list , class) %in% "data.frame" ) ) stop( "data.list argument must be a list of data.frames" )
-  if ( length( unique( sapply( data.list , nrow ) ) ) > 1 ) stop( "number of observations varies across data.frames. check pairing." )
+  if ( class( data ) != "list" ) stop( "data argument must be a list of data.frames" )
+  if ( length( data ) < 2 ) stop( "data argument must have at least 2 datasets." )
+  if ( !all( sapply( data , class) %in% "data.frame" ) ) stop( "data argument must be a list of data.frames" )
+  if ( length( unique( sapply( data , nrow ) ) ) > 1 ) stop( "number of observations varies across data.frames. check pairing." )
 
   # create design on the first dataset
   res <- survey::svydesign( ids, probs = probs, strata = strata, variables = NULL,
-                            fpc = fpc, data= data.list[[1]], nest = nest, check.strata = !nest , weights = weights )
+                            fpc = fpc, data= data[[1]], nest = nest, check.strata = !nest , weights = weights , pps = pps , ... )
 
   # correct call
   res$call <- match.call()
 
   # adjusts variables
-  res$variables <- data.list
+  res$variables <- data
 
   # change class
   class( res ) <- c( "surflow.design" , class( res ) )

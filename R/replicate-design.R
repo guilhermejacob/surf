@@ -11,7 +11,7 @@
 #' @details The arguments of this function are those of \code{\link[survey]{as.svrepdesign}},
 #'
 #' @return Object of class \code{surflow.design}, \link[survey]{svrepdesign} with
-#' a \code{data.list} attribute containing the data for each survey round.
+#' a \code{data} attribute containing the data for each survey round.
 #'
 #' @author Guilherme Jacob
 #'
@@ -25,16 +25,14 @@
 #' flowdes <-
 #' sfydesign( ids = ~ 1 ,
 #'                probs = ~ prob ,
-#'                data.list = list( dfa0 , dfa1 ) ,
+#'                data = list( dfa0 , dfa1 ) ,
 #'                nest = TRUE )
 #'
 #' # transform in replicate design
 #' flowdes_rep <- as.surfrdesign( flowdes , type = "bootstrap" , replicates = 50 )
 #'
-#' @references Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
-#' Survey Methodology 40(2), pp. 285-321.
-#'
-#' Lumley, Thomas S. (2010). Complex Surveys: A Guide to Analysis Using R. Wiley Publishing.
+#' @references LUMLEY, T. \emph{Complex Surveys:} A guide to analysis using R.
+#' Hoboken: John Wiley & Sons, 2010. (Wiley Series in Survey Methodology). ISBN 978-0-470-28430-8.
 #'
 #' @keywords survey
 #'

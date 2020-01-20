@@ -19,12 +19,12 @@ pop_frame <- merge( pop , pop_frame )[ , -1 ] ; rm( pop )
 # create strata
 pop_frame$strat <- ifelse( pop_frame$v0 == 1 , rbinom( nrow( pop_frame ) , 1 , .7 ) , rbinom( nrow( pop_frame ) , 1 , .3 ) ) + 1
 pop_frame <- pop_frame[ order( pop_frame$strat ) , ]
+pop_frame <- data.frame( apply(pop_frame[,] , 2 , factor) , stringsAsFactors = TRUE )
 
 # adds non-response
 pop_frame[ as.logical( rbinom(N,1,.2) ) , 1 ] <- NA
 pop_frame[ !is.na( pop_frame[,1] ) & as.logical( rbinom(N,1,.1) ) , 2 ] <- NA
 pop_frame[ is.na( pop_frame[,2] ) & as.logical( rbinom(N,1,.7) ) , 1 ] <- NA
-pop_frame <- apply(pop_frame,2,factor)
 
 # extract sample
 smp_info <- sampling::strata( pop_frame , stratanames = "strat" , size = round( c( .05 , .10 ) * table( pop_frame[,"strat"] ) ) , method = "srswor" )
@@ -40,4 +40,4 @@ dfa1_strat <- smp_frame[ , 2 , drop = FALSE ]
 colnames( dfa1_strat ) <- "v0"
 
 # save results
-devtools::use_data( muij_pop , nipij_pop , dfa0_strat , dfa1_strat , internal = TRUE , overwrite = TRUE )
+devtools::use_data( muij_pop , nipij_pop , dfa0_strat , dfa1_strat , internal = TRUE , overwrite = TRUE , compress = "xz" )

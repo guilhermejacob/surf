@@ -24,7 +24,7 @@ data( "artificial" )
 flowdes <-
 sfydesign( ids = ~ 1 ,
                probs = ~ prob ,
-               data.list = list( dfa0 , dfa1 ) ,
+               data = list( dfa0 , dfa1 ) ,
                nest = TRUE )
 
 # update

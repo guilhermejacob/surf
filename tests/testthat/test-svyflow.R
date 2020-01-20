@@ -3,14 +3,14 @@ context("flow estimates")
 # build designs
 flowdes_srs <-
   sfydesign( ids = ~0 ,
-             probs = ~ prob ,
-             data.list = list( dfa0 , dfa1 ) ,
+             fpc = ~ 1/prob ,
+             data = list( dfa0 , dfa1 ) ,
              nest = TRUE )
 flowdes_strat <-
   sfydesign( ids = ~0 ,
              probs = ~ prob ,
              strata = ~ stratum ,
-             data.list = list( surf:::dfa0_strat , surf:::dfa1_strat ) ,
+             data = list( surf:::dfa0_strat , surf:::dfa1_strat ) ,
              nest = TRUE )
 
 # create replicate designs

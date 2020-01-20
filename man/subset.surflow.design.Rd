@@ -27,7 +27,7 @@ flowdes <-
   sfydesign( ids = ~ upa ,
              probs = ~ longprob ,
              strata = ~ estrato ,
-             data.list = list( dfr0 , dfr1 ) ,
+             data = list( dfr0 , dfr1 ) ,
              nest = TRUE )
 
 # subset

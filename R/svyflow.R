@@ -20,10 +20,11 @@
 #'
 #' @examples
 #'
-#' @references Gutierrez, A., Trujillo, L. \& Silva, N. (2014). The estimation of gross flows in complex surveys with random nonresponse,
-#' Survey Methodology 40(2), pp. 285-321.
+#' @references ROJAS, H. A. G.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
+#' \emph{Survey Methodology}, v. 40, n. 2, p. 285–321, dec. 2014. URL \url{https://www150.statcan.gc.ca/n1/en/catalogue/12-001-X201400214113}.
 #'
-#' Lumley, Thomas S. (2010). Complex Surveys: A Guide to Analysis Using R. Wiley Publishing.
+#' LUMLEY, T. \emph{Complex Surveys:} A guide to analysis using R.
+#' Hoboken: John Wiley & Sons, 2010. (Wiley Series in Survey Methodology). ISBN 978-0-470-28430-8.
 #'
 #' @examples
 #' # load data
@@ -33,7 +34,7 @@
 #' flowdes <-
 #'   sfydesign( ids = ~0 ,
 #'                  probs = ~ prob ,
-#'                  data.list = list( dfa0 , dfa1 ) ,
+#'                  data = list( dfa0 , dfa1 ) ,
 #'                  nest = TRUE )
 #'
 #' # gross flows
