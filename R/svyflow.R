@@ -61,6 +61,11 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 
   # test column format
   if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
+  xlevels <- lapply( xx , function(zz) levels( zz ) )
+  ll <- lapply( xlevels , function(zz) length( zz ) )
+  if ( !all( ll[[1]] == ll[[2]] && xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
+  xlevels <- unique( unlist(xlevels) )
+  ll <- unique( unlist(ll) )
 
   # add time frame
   colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
@@ -101,52 +106,46 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 
   ### variance calculations
 
-  # yy matrix
-  yy <- lapply( seq_len( ncol( xx ) ) , function( j ) {
-    kk <- stats::model.matrix( ~-1+. , data = xx[,j,drop = FALSE] , contrasts.arg = lapply( xx[ , j, drop = FALSE ] , stats::contrasts, contrasts=FALSE ) , na.action = stats::na.pass )
-    oo <- matrix( 0 , nrow = nrow(xx) , ncol = ncol(kk) , dimnames = list( seq_len( nrow(xx) ) , colnames( kk) ) )
-    oo[ match( rownames( kk ) , rownames( oo ) ) , ] <- kk
-    oo
-  } )
+  # yy array
+  yy <- array( 0  , dim = c( nrow( xx ) , ll , ncol( xx ) ) )
+  for ( r in seq_len( ncol( xx ) ) ) {
+    kk <- stats::model.matrix( ~-1+. , data = xx[,r,drop = FALSE] , contrasts.arg = lapply( xx[,r, drop = FALSE ] , stats::contrasts, contrasts=FALSE ) , na.action = stats::na.pass )
+    yy[ match( rownames( kk ) , seq_len( nrow( yy ) ) ) , , r ] <- kk ; rm( kk )
+  }
 
   # create matrix of z variables
   zz <- apply( xx , 2 , function(z) as.numeric( !is.na(z) ) )
 
   ### special variables
-  vv_k <- rowSums( yy[[1]] ) * rowSums( yy[[2]] ) + rowSums( yy[[2]] * (1 - zz[,1]) ) + rowSums( yy[[1]] * (1 - zz[,2]) ) + ( 1- zz[,1] ) * ( 1- zz[,2] )
-  nnij_k <- list(NULL)
-  for ( i in seq_len( nrow(NN) ) ) nnij_k[[i]] <- list(NULL)
-  for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) nnij_k[[i]][[j]] <- yy[[1]][,i] * yy[[2]][,j]
+  vv_k <- rowSums( yy[,,1] ) * rowSums( yy[,,2] ) + rowSums( yy[,,2] * (1 - zz[,1]) ) + rowSums( yy[,,1] * (1 - zz[,2]) ) + ( 1- zz[,1] ) * ( 1- zz[,2] )
+  nnij_k <- array( 0  , dim = c( nrow( xx ) , nrow( NN ) , ncol( NN ) ) )
+  for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) nnij_k[,i,j] <- yy[,i,1] * yy[,j,2]
 
   # u variables
-  ueta_ik <- list(NULL)
+  ueta_ik <- array( 0 , dim = c( nrow(xx) , nrow(NN) ) )
   for ( i in seq_len( nrow(NN) ) ) {
-    ueta_ik[[i]] <-
-      ( rowSums( do.call( cbind , nnij_k[[i]] ) ) + yy[[1]][,i, drop = FALSE ] * ( 1 - zz[,2 , drop = FALSE ] ) ) / eta_iv [i] +
-      rowSums( sweep( sweep( yy[[2]] , 1 , ( 1 - zz[,1] ) , "*" ) , 2 , p_ijv[i,] / colSums( nipij ) , "*" ) ) +
+    ueta_ik[,i] <-
+      ( rowSums( nnij_k[,i,] ) + yy[,i,1] * ( 1 - zz[,2] ) ) / eta_iv [i] +
+      rowSums( sweep( sweep( yy[,,2] , 1 , ( 1 - zz[,1] ) , "*" ) , 2 , p_ijv[i,] / colSums( nipij ) , "*" ) ) +
       (1 - zz[,1]) * (1 - zz[,2])
   }
-  ueta_ik <- do.call( cbind , ueta_ik)
 
-  up_ijk <- list(NULL)
-  for ( i in seq_len( nrow(NN) ) ) up_ijk[[i]] <- list(NULL)
+  up_ijk <- array( NA , dim = c( nrow(xx) , nrow(NN) , ncol(NN) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    up_ijk[[i]][[j]] <- nnij_k[[i]][[j]] / p_ijv[i,j] + yy[[1]][,i] * (1 - zz[,2]) +
-      yy[[2]][,j] * (1 - zz[,1]) * ( eta_iv[i] / colSums( nipij )[j] ) + (1 - zz[,1]) * (1 - zz[,2]) * eta_iv[i]
+    up_ijk[,i,j] <- nnij_k[,i,j] / p_ijv[i,j] + yy[,i,1] * (1 - zz[,2]) +
+      yy[,j,2] * (1 - zz[,1]) * ( eta_iv[i] / colSums( nipij )[j] ) + (1 - zz[,1]) * (1 - zz[,2]) * eta_iv[i]
   }
 
   # j variables
-  jeta_i <- list(NULL)
+  jeta_i <- vector( "numeric" , length = nrow(NN) )
   for ( i in seq_len( nrow(NN) ) ) {
-    jeta_i[[i]] <- -2/(eta_iv[i])^2 * sum( ww * yy[[1]][,i] ) +
-      (1/eta_iv[i])^2 * sum( ww * yy[[1]][,i] * zz[,2] ) - sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[[2]] , 2 , (p_ijv[i,] / colSums( nipij ))^2 , "*" ) ) )
+    jeta_i[i] <- -2/(eta_iv[i])^2 * sum( ww * yy[,i,1] ) +
+      (1/eta_iv[i])^2 * sum( ww * yy[,i,1] * zz[,2] ) - sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , (p_ijv[i,] / colSums( nipij ))^2 , "*" ) ) )
   }
-  jeta_i <- do.call( cbind , jeta_i )
 
-  jp_ij <- list(NULL)
-  for ( i in seq_len( nrow(NN) ) ) jp_ij[[i]] <- list(NULL)
+  jp_ij <- array( NA , dim = c( nrow(NN) , ncol(NN) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    jp_ij[[i]][[j]] <- - 1/(p_ijv[i,j]^2) * sum( ww * nnij_k[[i]][[j]] ) - ( ( eta_iv[i] / colSums( nipij )[j] )^2 ) * sum( ww * yy[[2]][,j] * (1 - zz[,1] ) )
+    jp_ij[i,j] <- - 1/(p_ijv[i,j]^2) * sum( ww * nnij_k[,i,j] ) - ( ( eta_iv[i] / colSums( nipij )[j] )^2 ) * sum( ww * yy[,j,2] * (1 - zz[,1] ) )
   }
 
   # # variance of eta and p-matrix
@@ -174,11 +173,11 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   # }
 
   # alternative strategy
-  nipij_k <- array( NA, dim = c( length( vv_k ) , nrow( NN ) , ncol( NN ) ) )
-  muij_k <- array( NA, dim = c( length( vv_k ) , nrow( NN ) , ncol( NN ) ) )
+  nipij_k <- array( NA, dim = c( nrow( xx ) , nrow( NN ) , ncol( NN ) ) )
+  muij_k <- array( NA, dim = c( nrow( xx ) , nrow( NN ) , ncol( NN ) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
-    nipij_k[,i,j] <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[[i]] ) + eta_iv[i] * ( up_ijk[[i]][[j]] / jp_ij[[i]][[j]] )
-    muij_k <- nipij[i,j] * vv_k + N * nipij_k
+    nipij_k[,i,j] <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[i] ) + eta_iv[i] * ( up_ijk[,i,j] / jp_ij[i,j] )
+    muij_k[,i,j] <- nipij[i,j] * vv_k + N * nipij_k[,i,j]
   }
   mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
   for ( i in seq_len( nrow(NN) ) ) {
