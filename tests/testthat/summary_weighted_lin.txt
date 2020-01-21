@@ -1,0 +1,16 @@
+> summary(flowdes_strat)
+Stratified Independent Sampling design (with replacement)
+sfydesign(ids = ~0, probs = ~prob, strata = ~stratum, data = list(surf:::dfa0_strat, 
+    surf:::dfa1_strat), nest = TRUE)
+Probabilities:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.04999 0.10001 0.10001 0.08979 0.10001 0.10001 
+Stratum Sizes: 
+              1    2
+obs        1696 6608
+design.PSU 1696 6608
+actual.PSU 1696 6608
+Number of repetitions: 1 
+Data variables:
+[1] "v0"
+

@@ -1,0 +1,7 @@
+> print(flowdes_srs)
+Independent Sampling design (with replacement)
+sfydesign(ids = ~0, data = list(dfa0, dfa1), nest = TRUE)
+Number of repetitions: 1 
+Data variables:
+[1] "v0" "v1"
+
