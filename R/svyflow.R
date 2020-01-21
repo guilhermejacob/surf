@@ -179,7 +179,6 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     nipij_k[,i,j] <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[i] ) + eta_iv[i] * ( up_ijk[,i,j] / jp_ij[i,j] )
     muij_k[,i,j] <- nipij[i,j] * vv_k + N * nipij_k[,i,j]
   }
-  rm( yy , ueta_ik , jeta_i , up_ijk , jp_ij )
   mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
   for ( i in seq_len( nrow(NN) ) ) {
     if ( flow.type == "gross" ) {
