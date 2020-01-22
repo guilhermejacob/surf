@@ -32,14 +32,14 @@ test_that( "svyflowdesign works on stratified designs" , {
 } )
 
 
-test_that( "replicate design from unweighted designs" , {
-  verify_output("summary_unweighted_rep.txt", { summary( flowdes_srs_rep ) } )
-  verify_output("print_unweighted_rep.txt", { print( flowdes_srs_rep ) } )
-} )
+# test_that( "replicate design from unweighted designs" , {
+#   verify_output("summary_unweighted_rep.txt", { summary( flowdes_srs_rep ) } )
+#   verify_output("print_unweighted_rep.txt", { print( flowdes_srs_rep ) } )
+# } )
 
 
-test_that( "svyflowdesign works on stratified replicate designs" , {
-  verify_output("summary_weighted_rep.txt", { summary( flowdes_strat_rep ) } )
-  verify_output("print_weighted_rep.txt", { print( flowdes_strat_rep ) } )
-} )
+# test_that( "svyflowdesign works on stratified replicate designs" , {
+#   verify_output("summary_weighted_rep.txt", { summary( flowdes_strat_rep ) } )
+#   verify_output("print_weighted_rep.txt", { print( flowdes_strat_rep ) } )
+# } )
 
