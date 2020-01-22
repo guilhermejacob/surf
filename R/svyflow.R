@@ -179,14 +179,15 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     nipij_k[,i,j] <- p_ijv[i,j] * ( ueta_ik[,i] / jeta_i[i] ) + eta_iv[i] * ( up_ijk[,i,j] / jp_ij[i,j] )
     muij_k[,i,j] <- nipij[i,j] * vv_k + N * nipij_k[,i,j]
   }
-  mu_var <- matrix( NA, nrow = nrow(NN) , ncol = ncol(NN) )
-  for ( i in seq_len( nrow(NN) ) ) {
-    if ( flow.type == "gross" ) {
-      mu_var[i,] <- diag( survey::svyrecvar( ww * muij_k[,i,] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    } else {
-      mu_var[i,] <- diag( survey::svyrecvar( ww * nipij_k[,i,] , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    }
+  rm( yy , ueta_ik , jeta_i , up_ijk , jp_ij )
+  nipij_k <- do.call( cbind , lapply( seq_len( ncol( NN) ) , function( z ) nipij_k[,z,] ) )
+  muij_k <- do.call( cbind , lapply( seq_len( ncol( NN) ) , function( z ) muij_k[,z,] ) )
+  if ( flow.type == "gross" ) {
+    mu_var <- diag( survey::svyrecvar( ww * muij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+  } else {
+    mu_var <- diag( survey::svyrecvar( ww * nipij_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
   }
+  mu_var <- matrix( mu_var , nrow = nrow( NN ) , ncol = ncol( NN ) , byrow = TRUE )
 
   # format results
   rval <- if ( flow.type == "gross" ) mu_ij else nipij
