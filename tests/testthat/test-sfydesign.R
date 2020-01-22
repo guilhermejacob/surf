@@ -1,5 +1,8 @@
 context("survflow design objects" )
 
+# define seed for random numbers
+set.seed(123)
+
 # load data
 data( "artificial" )
 

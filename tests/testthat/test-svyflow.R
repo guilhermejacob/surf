@@ -1,5 +1,8 @@
 context("flow estimates")
 
+# define seed for random numbers
+set.seed(123)
+
 # build designs
 flowdes_srs <-
   sfydesign( ids = ~0 ,
@@ -76,44 +79,44 @@ test_that( "extraction of estimates" , {
 test_that( "version-consistency tests" , {
 
   # point estimates
-  verify_output( "gflow_srs_lin coef.txt" , coef( gflow_srs_lin ) )
-  verify_output( "gflow_strat_lin coef.txt" , coef( gflow_strat_lin ) )
-  verify_output( "gflow_srs_rep coef.txt" , coef( gflow_srs_rep ) )
-  verify_output( "gflow_strat_rep coef.txt" , coef( gflow_strat_rep ) )
-  verify_output( "nflow_srs_lin coef.txt" , coef( nflow_srs_lin ) )
-  verify_output( "nflow_strat_lin coef.txt" , coef( nflow_strat_lin ) )
-  verify_output( "nflow_srs_rep coef.txt" , coef( nflow_srs_rep ) )
-  verify_output( "nflow_strat_rep coef.txt" , coef( nflow_strat_rep ) )
+  verify_output( "gflow_srs_lin_coef.txt" , coef( gflow_srs_lin ) )
+  verify_output( "gflow_strat_lin_coef.txt" , coef( gflow_strat_lin ) )
+  verify_output( "gflow_srs_rep_coef.txt" , coef( gflow_srs_rep ) )
+  verify_output( "gflow_strat_rep_coef.txt" , coef( gflow_strat_rep ) )
+  verify_output( "nflow_srs_lin_coef.txt" , coef( nflow_srs_lin ) )
+  verify_output( "nflow_strat_lin_coef.txt" , coef( nflow_strat_lin ) )
+  verify_output( "nflow_srs_rep_coef.txt" , coef( nflow_srs_rep ) )
+  verify_output( "nflow_strat_rep_coef.txt" , coef( nflow_strat_rep ) )
 
   # variances
-  verify_output( "gflow_srs_lin vcov.txt" , vcov( gflow_srs_lin ) )
-  verify_output( "gflow_strat_lin vcov.txt" , vcov( gflow_strat_lin ) )
-  verify_output( "gflow_srs_rep vcov.txt" , vcov( gflow_srs_rep ) )
-  verify_output( "gflow_strat_rep vcov.txt" , vcov( gflow_strat_rep ) )
-  verify_output( "nflow_srs_lin vcov.txt" , vcov( nflow_srs_lin ) )
-  verify_output( "nflow_strat_lin vcov.txt" , vcov( nflow_strat_lin ) )
-  verify_output( "nflow_srs_rep vcov.txt" , vcov( nflow_srs_rep ) )
-  verify_output( "nflow_strat_rep vcov.txt" , vcov( nflow_strat_rep ) )
+  verify_output( "gflow_srs_lin_vcov.txt" , vcov( gflow_srs_lin ) )
+  verify_output( "gflow_strat_lin_vcov.txt" , vcov( gflow_strat_lin ) )
+  verify_output( "gflow_srs_rep_vcov.txt" , vcov( gflow_srs_rep ) )
+  verify_output( "gflow_strat_rep_vcov.txt" , vcov( gflow_strat_rep ) )
+  verify_output( "nflow_srs_lin_vcov.txt" , vcov( nflow_srs_lin ) )
+  verify_output( "nflow_strat_lin_vcov.txt" , vcov( nflow_strat_lin ) )
+  verify_output( "nflow_srs_rep_vcov.txt" , vcov( nflow_srs_rep ) )
+  verify_output( "nflow_strat_rep_vcov.txt" , vcov( nflow_strat_rep ) )
 
   # standard errors
-  verify_output( "gflow_srs_lin SE.txt" , SE( gflow_srs_lin ) )
-  verify_output( "gflow_strat_lin SE.txt" , SE( gflow_strat_lin ) )
-  verify_output( "gflow_srs_rep SE.txt" , SE( gflow_srs_rep ) )
-  verify_output( "gflow_strat_rep SE.txt" , SE( gflow_strat_rep ) )
-  verify_output( "nflow_srs_lin SE.txt" , SE( nflow_srs_lin ) )
-  verify_output( "nflow_strat_lin SE.txt" , SE( nflow_strat_lin ) )
-  verify_output( "nflow_srs_rep SE.txt" , SE( nflow_srs_rep ) )
-  verify_output( "nflow_strat_rep SE.txt" , SE( nflow_strat_rep ) )
+  verify_output( "gflow_srs_lin_SE.txt" , SE( gflow_srs_lin ) )
+  verify_output( "gflow_strat_lin_SE.txt" , SE( gflow_strat_lin ) )
+  verify_output( "gflow_srs_rep_SE.txt" , SE( gflow_srs_rep ) )
+  verify_output( "gflow_strat_rep_SE.txt" , SE( gflow_strat_rep ) )
+  verify_output( "nflow_srs_lin_SE.txt" , SE( nflow_srs_lin ) )
+  verify_output( "nflow_strat_lin_SE.txt" , SE( nflow_strat_lin ) )
+  verify_output( "nflow_srs_rep_SE.txt" , SE( nflow_srs_rep ) )
+  verify_output( "nflow_strat_rep_SE.txt" , SE( nflow_strat_rep ) )
 
   # coefficients of variation
-  verify_output( "gflow_srs_lin cv.txt" , cv( gflow_srs_lin ) )
-  verify_output( "gflow_strat_lin cv.txt" , cv( gflow_strat_lin ) )
-  verify_output( "gflow_srs_rep cv.txt" , cv( gflow_srs_rep ) )
-  verify_output( "gflow_strat_rep cv.txt" , cv( gflow_strat_rep ) )
-  verify_output( "nflow_srs_lin cv.txt" , cv( nflow_srs_lin ) )
-  verify_output( "nflow_strat_lin cv.txt" , cv( nflow_strat_lin ) )
-  verify_output( "nflow_srs_rep cv.txt" , cv( nflow_srs_rep ) )
-  verify_output( "nflow_strat_rep cv.txt" , cv( nflow_strat_rep ) )
+  verify_output( "gflow_srs_lin_cv.txt" , cv( gflow_srs_lin ) )
+  verify_output( "gflow_strat_lin_cv.txt" , cv( gflow_strat_lin ) )
+  verify_output( "gflow_srs_rep_cv.txt" , cv( gflow_srs_rep ) )
+  verify_output( "gflow_strat_rep_cv.txt" , cv( gflow_strat_rep ) )
+  verify_output( "nflow_srs_lin_cv.txt" , cv( nflow_srs_lin ) )
+  verify_output( "nflow_strat_lin_cv.txt" , cv( nflow_strat_lin ) )
+  verify_output( "nflow_srs_rep_cv.txt" , cv( nflow_srs_rep ) )
+  verify_output( "nflow_strat_rep_cv.txt" , cv( nflow_strat_rep ) )
 
 } )
 
