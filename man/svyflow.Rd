@@ -7,11 +7,19 @@
 \alias{svyflow.surflow.design}
 \title{Summary statistics for repeated sample surveys}
 \usage{
-\method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, ...)
+\method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, na.rm, ...)
 
-\method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, ...)
+\method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, na.rm, ...)
 
-\method{svyflow}{surflow.design}(x, design, flow.type = NULL, rounds = c(0, 1), max.iter = 10, ...)
+\method{svyflow}{surflow.design}(
+  x,
+  design,
+  flow.type = NULL,
+  rounds = c(0, 1),
+  max.iter = 10,
+  na.rm = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{A formula}
@@ -24,6 +32,8 @@
 
 \item{max.iter}{number of iterations. Defaults to \code{max.iter = 10}.}
 
+\item{na.rm}{Should missing variables be dropped? Defaults to \code{na.rm = FALSE}. See details for further information.}
+
 \item{...}{future expansion.}
 }
 \value{
@@ -35,7 +45,17 @@ These objects have methods for coef, vcov, SE, and cv.
 Compute gross flows for data from complex surveys with repeated samples.
 }
 \details{
-...
+The \code{na.rm} option should be used cautiously. Usually, \code{NA} encoding has two possible meanings: a \emph{missing} information or
+a \emph{not applicable} information. If the former should be dropped, while the latter should not. By default, if the table has an \code{NA}, it will
+return an table with \code{NAs}. If \code{na.rm = TRUE}, the \code{NA} encoded responses are assumed to be missing at random, and Rojas et al. (2014)
+method is applied.
+
+It is important to distinguish missing responses from unnaplicable responses. This is feasible by  subsetting the design
+for only applicable responses (with actual missing responses, if that is the case). For instance, suppose that we have two encoded variables:
+(a) employed/unemployed; and (b) type of contract, with NAs if the response is missing or is unnaplicable. The answers of (a) define what are
+the applicable responses for responses for (b). In this case, if we are going to analyze contract changes from people employed in the first round,
+we should filter for people emplyed in both the first \emph{and} second rounds. This can be done using \code{subset}. Then, the remaining \code{NAs} are
+actual missing responses.
 }
 \examples{
 

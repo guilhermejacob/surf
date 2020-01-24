@@ -8,9 +8,20 @@
 #' @param flow.type  type of flow to estimate: "gross" for counts and "net" for probabilities. Defaults to \code{flow.type = "gross"}.
 #' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param max.iter  number of iterations. Defaults to \code{max.iter = 10}.
+#' @param na.rm  Should missing variables be dropped? Defaults to \code{na.rm = FALSE}. See details for further information.
 #' @param ...  future expansion.
 #'
-#' @details ...
+#' @details The \code{na.rm} option should be used cautiously. Usually, \code{NA} encoding has two possible meanings: a \emph{missing} information or
+#' a \emph{not applicable} information. If the former should be dropped, while the latter should not. By default, if the table has an \code{NA}, it will
+#' return an table with \code{NAs}. If \code{na.rm = TRUE}, the \code{NA} encoded responses are assumed to be missing at random, and Rojas et al. (2014)
+#' method is applied.
+#'
+#' It is important to distinguish missing responses from unnaplicable responses. This is feasible by  subsetting the design
+#' for only applicable responses (with actual missing responses, if that is the case). For instance, suppose that we have two encoded variables:
+#' (a) employed/unemployed; and (b) type of contract, with NAs if the response is missing or is unnaplicable. The answers of (a) define what are
+#' the applicable responses for responses for (b). In this case, if we are going to analyze contract changes from people employed in the first round,
+#' we should filter for people emplyed in both the first \emph{and} second rounds. This can be done using \code{subset}. Then, the remaining \code{NAs} are
+#' actual missing responses.
 #'
 #' @return Objects of class "flowstat", which are tables with a "var" attribute giving the variance and a "statistic" attribute giving the type of flow.
 #'
@@ -50,7 +61,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , ... ){
+svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , na.rm , ... ){
 
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
@@ -65,7 +76,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   ll <- unique( unlist(ll) )
 
   # add time frame
-  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
+  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) - 1 , ":" , colnames( xx ) )
 
   # collect weights
   ww <- 1 / design$prob
@@ -77,6 +88,20 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
   NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
   N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
+
+  # handling missing
+  if ( sum( MM , RR , CC ) > 0 && !na.rm ) {
+    # format results
+    NN[,] <- NA
+    rval <- NN
+    rval <- as.table(rval)
+    class(rval) <- "flowstat"
+    attr( rval , "var" )       <- unclass( NN )
+    attr( rval , "statistic" ) <- flow.type
+    attr( rval , "rounds" )    <- rounds
+    attr( rval , "formula" )   <- x
+    return(rval)
+  }
 
   # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
   psi <- ( sum( NN ) + sum( RR ) ) / N
@@ -188,9 +213,9 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 
   # format results
   rval <- if ( flow.type == "gross" ) mu_ij else nipij
-  rval <- as.table(rval)
+  rval <- unclass(rval)
   class(rval) <- "flowstat"
-  attr( rval , "var" )       <- as.table(mu_var)
+  attr( rval , "var" )       <- unclass(mu_var)
   dimnames( attr( rval , "var" ) ) <- dimnames( mu_ij )
   attr( rval , "statistic" ) <- flow.type
   attr( rval , "rounds" )    <- rounds
@@ -202,7 +227,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 #' @export
 #' @rdname svyflow
 #' @method svyflow svyrep.design
-svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , ... ){
+svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , na.rm , ... ){
 
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
@@ -212,7 +237,7 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
 
   # add time frame
-  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
+  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) - 1 , ":" , colnames( xx ) )
 
   # collect weights
   ww <- stats::weights( design , "sampling" )
@@ -224,6 +249,20 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   MM <- NN[ nrow( NN ) , ncol( NN ) ]
   NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
   N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
+
+  # handling missing
+  if ( sum( MM , RR , CC ) > 0 && !na.rm ) {
+    # format results
+    NN[,] <- NA
+    rval <- NN
+    rval <- unclass(rval)
+    class(rval) <- "flowstat"
+    attr( rval , "var" )       <- unclass(NN)
+    attr( rval , "statistic" ) <- flow.type
+    attr( rval , "rounds" )    <- rounds
+    attr( rval , "formula" )   <- x
+    return(rval)
+  }
 
   # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
   psi <- ( sum( NN ) + sum( RR ) ) / N
@@ -303,9 +342,9 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   }
 
   # format results
-  rval <- as.table(rval)
+  rval <- unclass(rval)
   class(rval) <- "flowstat"
-  attr( rval , "var" ) <- p_var
+  attr( rval , "var" ) <- unclass( p_var )
   dimnames( attr( rval , "var" ) ) <- dimnames( rval )
   attr( rval , "statistic" ) <- flow.type
   attr( rval , "rounds" )    <- rounds
@@ -317,10 +356,10 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
 #' @export
 #' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , ... ) {
+svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , na.rm = FALSE , ... ) {
   flow.type <- match.arg( flow.type , c( "gross" , "net" ) )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-  NextMethod( "svyflow" , design = design , flow.type = flow.type , rounds = rounds , max.iter = max.iter , ... )
+  NextMethod( "svyflow" , design = design , flow.type = flow.type , rounds = rounds , max.iter = max.iter , na.rm = na.rm , ... )
 }
 
 #' @export

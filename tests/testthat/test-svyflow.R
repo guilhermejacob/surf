@@ -21,14 +21,22 @@ flowdes_srs_rep <- as.surfrdesign( flowdes_srs , type = "bootstrap" , replicate 
 flowdes_strat_rep <- as.surfrdesign( flowdes_strat , type = "bootstrap" , replicate = 50 )
 
 # estimate flows
-gflow_srs_lin <- svyflow( ~v0 , flowdes_srs )
-gflow_strat_lin <- svyflow( ~v0 , flowdes_strat )
-nflow_srs_lin <- svyflow( ~v0 , flowdes_srs , flow.type = "net" )
-nflow_strat_lin <- svyflow( ~v0 , flowdes_strat , flow.type = "net" )
-gflow_srs_rep <- svyflow( ~v0 , flowdes_srs_rep )
-gflow_strat_rep <- svyflow( ~v0 , flowdes_strat_rep )
-nflow_srs_rep <- svyflow( ~v0 , flowdes_srs_rep , flow.type = "net" )
-nflow_strat_rep <- svyflow( ~v0 , flowdes_strat_rep , flow.type = "net" )
+gflow_srs_lin <- svyflow( ~v0 , flowdes_srs , na.rm = TRUE )
+gflow_strat_lin <- svyflow( ~v0 , flowdes_strat , na.rm = TRUE )
+nflow_srs_lin <- svyflow( ~v0 , flowdes_srs , flow.type = "net" , na.rm = TRUE )
+nflow_strat_lin <- svyflow( ~v0 , flowdes_strat , flow.type = "net" , na.rm = TRUE )
+gflow_srs_rep <- svyflow( ~v0 , flowdes_srs_rep , na.rm = TRUE )
+gflow_strat_rep <- svyflow( ~v0 , flowdes_strat_rep , na.rm = TRUE )
+nflow_srs_rep <- svyflow( ~v0 , flowdes_srs_rep , flow.type = "net" , na.rm = TRUE )
+nflow_strat_rep <- svyflow( ~v0 , flowdes_strat_rep , flow.type = "net" , na.rm = TRUE )
+gflow_srs_lin_na <- svyflow( ~v0 , flowdes_srs )
+gflow_strat_lin_na <- svyflow( ~v0 , flowdes_strat )
+nflow_srs_lin_na <- svyflow( ~v0 , flowdes_srs , flow.type = "net" )
+nflow_strat_lin_na <- svyflow( ~v0 , flowdes_strat , flow.type = "net" )
+gflow_srs_rep_na <- svyflow( ~v0 , flowdes_srs_rep )
+gflow_strat_rep_na <- svyflow( ~v0 , flowdes_strat_rep )
+nflow_srs_rep_na <- svyflow( ~v0 , flowdes_srs_rep , flow.type = "net" )
+nflow_strat_rep_na <- svyflow( ~v0 , flowdes_strat_rep , flow.type = "net" )
 
 # test extraction of associated measures
 test_that( "extraction of estimates" , {

@@ -9,11 +9,11 @@ coef.flowstat <- function( object , ... ) {
 }
 
 #' @exportS3Method vcov flowstat
-vcov.flowstat <- function( object , ... ) attr( object , "var" )
+vcov.flowstat <- function( object , ... ) unclass( attr( object , "var" ) )
 
 #' @importFrom survey SE
 #' @exportS3Method SE flowstat
-SE.flowstat <- function( object , ... ) sqrt( attr( object , "var" ) )
+SE.flowstat <- function( object , ... ) unclass( sqrt( attr( object , "var" ) ) )
 
 #' @importFrom survey cv
 #' @exportS3Method  cv flowstat

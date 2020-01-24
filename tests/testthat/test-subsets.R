@@ -53,14 +53,22 @@ flowdes <-
 flowdes_rep <- as.surfrdesign( flowdes , type = "bootstrap" , replicate = 50 )
 
 # estimate flows
-gflow_lin_sub1 <- svyflow( ~v0 , subset( flowdes , v1 == 1 ) )
-gflow_lin_sub2 <- svyflow( ~v0 , subset( flowdes , v1 == 2 ) )
-nflow_lin_sub1 <- svyflow( ~v0 , subset( flowdes , v1 == 1 ) , flow.type = "net" )
-nflow_lin_sub2 <- svyflow( ~v0 , subset( flowdes , v1 == 2 ) , flow.type = "net" )
-gflow_rep_sub1 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 1 ) )
-gflow_rep_sub2 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 2 ) )
-nflow_rep_sub1 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 1 ) , flow.type = "net" )
-nflow_rep_sub2 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 2 ) , flow.type = "net" )
+gflow_lin_sub1 <- svyflow( ~v0 , subset( flowdes , v1 == 1 ) , na.rm = TRUE )
+gflow_lin_sub2 <- svyflow( ~v0 , subset( flowdes , v1 == 2 ) , na.rm = TRUE )
+nflow_lin_sub1 <- svyflow( ~v0 , subset( flowdes , v1 == 1 ) , flow.type = "net" , na.rm = TRUE )
+nflow_lin_sub2 <- svyflow( ~v0 , subset( flowdes , v1 == 2 ) , flow.type = "net" , na.rm = TRUE )
+gflow_rep_sub1 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 1 ) , na.rm = TRUE )
+gflow_rep_sub2 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 2 ) , na.rm = TRUE )
+nflow_rep_sub1 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 1 ) , flow.type = "net" , na.rm = TRUE )
+nflow_rep_sub2 <- svyflow( ~v0 , subset( flowdes_rep , v1 == 2 ) , flow.type = "net" , na.rm = TRUE )
+gflow_lin_sub1_na <-  svyflow( ~v0 , subset( flowdes , v1 == 1 ) )
+gflow_lin_sub2_na <-  svyflow( ~v0 , subset( flowdes , v1 == 2 ) )
+nflow_lin_sub1_na <-  svyflow( ~v0 , subset( flowdes , v1 == 1 ) , flow.type = "net" )
+nflow_lin_sub2_na <-  svyflow( ~v0 , subset( flowdes , v1 == 2 ) , flow.type = "net" )
+gflow_rep_sub1_na <-  svyflow( ~v0 , subset( flowdes_rep , v1 == 1 ) )
+gflow_rep_sub2_na <-  svyflow( ~v0 , subset( flowdes_rep , v1 == 2 ) )
+nflow_rep_sub1_na <-  svyflow( ~v0 , subset( flowdes_rep , v1 == 1 ) , flow.type = "net" )
+nflow_rep_sub2_na <-  svyflow( ~v0 , subset( flowdes_rep , v1 == 2 ) , flow.type = "net" )
 
 # test extraction of associated measures
 test_that( "extraction of estimates" , {
@@ -74,7 +82,10 @@ test_that( "extraction of estimates" , {
   expect_identical( coef( nflow_lin_sub2 ) , surf:::coef.flowstat( nflow_lin_sub2 ) )
   expect_identical( coef( nflow_rep_sub1 ) , surf:::coef.flowstat( nflow_rep_sub1 ) )
   expect_identical( coef( nflow_rep_sub2 ) , surf:::coef.flowstat( nflow_rep_sub2 ) )
-
+  expect_equal(sum(coef(nflow_lin_sub1)),1)
+  expect_equal(sum(coef(nflow_lin_sub2)),1)
+  expect_equal(sum(coef(nflow_rep_sub1)),1)
+  expect_equal(sum(coef(nflow_rep_sub2)),1)
 
   # variances
   expect_identical( vcov( gflow_lin_sub1 ) , surf:::vcov.flowstat( gflow_lin_sub1 ) )

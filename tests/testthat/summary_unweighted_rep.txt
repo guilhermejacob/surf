@@ -1,7 +1,0 @@
-> summary(flowdes_srs_rep)
-Call: survey::as.svrepdesign(design = design, ...)
-Survey bootstrap with 50 replicates.
-Number of repetitions: 1 
-Data variables:
-[1] "v0" "v1"
-
