@@ -38,7 +38,8 @@ subset.surflow.design <-
       r <- rep( TRUE , nrow( x$variables[[1]] ) )
       for ( z in rounds ) {
         s <- eval(e, x$variables[[z+1]], parent.frame())
-        r <- r & s & !is.na(s)
+        # r <- r & s & !is.na(s) # original line
+        r <- r & ( s | is.na(s) )
       }
       pwt <- x$pweights
       if (is.data.frame(pwt)) pwt <- pwt[[1]]
