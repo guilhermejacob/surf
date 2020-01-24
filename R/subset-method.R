@@ -31,7 +31,7 @@ subset.surflow.design <-
     if ( is.numeric( rounds ) ) {
       rounds <- unique( as.integer( rounds) )
       if ( !all( rounds %in% c( seq_along( x$variables ) - 1 ) ) ) stop( "invalid index; check ?subset.surflow.design for examples.")
-    } else stop( "invalid index; check ?update.surflow.design for examples.")
+    } else stop( "invalid index; check ?subset.surflow.design for examples.")
 
     if ( "svyrep.design" %in% class(x) ) {
       e <- substitute( subset )

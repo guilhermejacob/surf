@@ -28,7 +28,7 @@ check.strata = !nest, weights=NULL, pps=FALSE,...)
 \code{"overton"} to use Overton's approximation. An object of class \link[survey]{HR} to use the Hartley-Rao approximation.
 An object of class \link[survey]{ppsmat} to use the Horvitz-Thompson estimator.}
 
-\item{...}{for future expansion. See \link[survey]{svydesign} for mor information.}
+\item{...}{for future expansion. See \link[survey]{svydesign} for more information.}
 }
 \value{
 Object of class \code{surflow.design}, which are \link[survey]{svydesign} with

@@ -52,9 +52,6 @@
 #' @method svyflow survey.design2
 svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , ... ){
 
-  # preprocess
-  design$variables <- lapply( design$variables , function( zz ) {rownames(zz) <- seq_len( nrow(zz)) ; zz} )
-
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
   xx <- do.call( cbind , xx )

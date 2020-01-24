@@ -16,7 +16,7 @@
 #' @param pps	 \code{"brewer"} to use Brewer's approximation for PPS sampling without replacement.
 #' \code{"overton"} to use Overton's approximation. An object of class \link[survey]{HR} to use the Hartley-Rao approximation.
 #' An object of class \link[survey]{ppsmat} to use the Horvitz-Thompson estimator.
-#' @param ...  for future expansion. See \link[survey]{svydesign} for mor information.
+#' @param ...  for future expansion. See \link[survey]{svydesign} for more information.
 #'
 #' @details The arguments of this function are those of \code{\link[survey]{svydesign}},
 #' except for the \code{data}, which, in this case, is a list of \code{data.frames} with \emph{paired observations}; i.e., each
@@ -61,6 +61,9 @@ sfydesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data = NULL,
   if ( length( data ) < 2 ) stop( "data argument must have at least 2 datasets." )
   if ( !all( sapply( data , class) %in% "data.frame" ) ) stop( "data argument must be a list of data.frames" )
   if ( length( unique( sapply( data , nrow ) ) ) > 1 ) stop( "number of observations varies across data.frames. check pairing." )
+
+  # preprocess
+  data <- lapply( data , function( zz ) {rownames(zz) <- seq_len( nrow(zz)) ; zz} )
 
   # create design on the first dataset
   res <- survey::svydesign( ids, probs = probs, strata = strata, variables = NULL,
