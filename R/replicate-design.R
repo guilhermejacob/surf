@@ -41,5 +41,7 @@
 as.surfrdesign <- function( design , ... ) {
   design <- survey::as.svrepdesign( design = design , ... )
   class( design ) <- c( "surflow.design" , class( design ) )
+  attr( design , "fullpweights" ) <- design$pweights
+  attr(design , "fullrepweights" ) <- design$repweights
   design
 }

@@ -69,6 +69,9 @@ sfydesign <- function(ids, probs = NULL, strata = NULL, fpc = NULL, data = NULL,
   res <- survey::svydesign( ids, probs = probs, strata = strata, variables = NULL,
                             fpc = fpc, data= data[[1]], nest = nest, check.strata = !nest , weights = weights , pps = pps , ... )
 
+  # full sampling weights (used to calculate endogenous categories)
+  attr( res , "fullprob" ) <- stats::weights( res )
+
   # correct call
   res$call <- match.call()
 

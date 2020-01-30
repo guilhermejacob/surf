@@ -5,6 +5,7 @@
 #' @param x  a surflow design object
 #' @param subset	 An expression specifying the subpopulation
 #' @param rounds  a vector of integers indicating which round to apply subsetting condition. Defaults to \code{rounds = 0}, and the expression is applied to the first round.
+#' @param on.full.design  A logical, indicating wether the subset should be applied to full design weights. Only meaningful for endogenous categories.
 #' @param ...  future expansion
 #'
 #' @examples
@@ -25,7 +26,7 @@
 #' @method subset surflow.design
 #' @export
 subset.surflow.design <-
-  function (x , subset , rounds = 0 , ... ) {
+  function (x , subset , rounds = 0 , on.full.design = FALSE , ... ) {
 
     if ( is.null( rounds ) ) rounds <- seq_along( x$variables ) - 1
     if ( is.numeric( rounds ) ) {
@@ -41,23 +42,23 @@ subset.surflow.design <-
         # r <- r & s & !is.na(s) # original line
         r <- r & ( s | is.na(s) )
       }
-      pwt <- x$pweights
-      if (is.data.frame(pwt)) pwt <- pwt[[1]]
-      x$pweights <- pwt[r]
-      x$repweights <- x$repweights[r, , drop = FALSE]
-      if (!is.null(x$selfrep))
-        x$selfrep <- x$selfrep[r]
-      x$variables <- lapply( x$variables , function(zz) zz[r, , drop = FALSE] )
+      if ( on.full.design ) {
+        x$fullpweights[!r] <- 0
+        x$fullrepweights$weights[!r,] <- 0
+      }
+      x$pweights[!r] <- 0
+      x$repweights$weights[!r,] <- 0
       x$degf <- NULL
       x$degf <- survey::degf(x)
     } else {
       e <- substitute( subset )
       r <- rep( TRUE , nrow( x$variables[[1]] ) )
       for ( z in rounds ) {
-        s <- eval(e, x$variables[[z+1]], parent.frame())
+        s <- eval(e, x$variables[[z+1]], parent.frame() )
         # r <- r & s & !is.na(s) # original line
         r <- r & ( s | is.na(s) )
       }
+      if ( on.full.design ) x$fullprob[!r] <- Inf
       x$prob[!r] <- Inf
     }
     return( x )
