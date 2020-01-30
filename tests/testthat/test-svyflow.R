@@ -113,31 +113,31 @@ test_that("compare linearized vs replicate: coefficients of variation",{
   expect_equal( cv( nflow_srs_lin ) , cv( nflow_srs_rep ) , tolerance = .4 )
 } )
 
-# check for consistency across versions
-test_that( "version-consistency tests" , {
-
-  # point estimates
-  verify_output( "output/gflow_srs_lin_coef.txt" , coef( gflow_srs_lin ) )
-  verify_output( "output/gflow_srs_rep_coef.txt" , coef( gflow_srs_rep ) )
-  verify_output( "output/nflow_srs_lin_coef.txt" , coef( nflow_srs_lin ) )
-  verify_output( "output/nflow_srs_rep_coef.txt" , coef( nflow_srs_rep ) )
-
-  # variances
-  verify_output( "output/gflow_srs_lin_vcov.txt" , vcov( gflow_srs_lin ) )
-  # verify_output( "output/gflow_srs_rep_vcov.txt" , vcov( gflow_srs_rep ) )
-  verify_output( "output/nflow_srs_lin_vcov.txt" , vcov( nflow_srs_lin ) )
-  # verify_output( "output/nflow_srs_rep_vcov.txt" , vcov( nflow_srs_rep ) )
-
-  # standard errors
-  verify_output( "output/gflow_srs_lin_SE.txt" , SE( gflow_srs_lin ) )
-  # verify_output( "output/gflow_srs_rep_SE.txt" , SE( gflow_srs_rep ) )
-  verify_output( "output/nflow_srs_lin_SE.txt" , SE( nflow_srs_lin ) )
-  # verify_output( "output/nflow_srs_rep_SE.txt" , SE( nflow_srs_rep ) )
-
-  # coefficients of variation
-  verify_output( "output/gflow_srs_lin_cv.txt" , cv( gflow_srs_lin ) )
-  # verify_output( "output/gflow_srs_rep_cv.txt" , cv( gflow_srs_rep ) )
-  verify_output( "output/nflow_srs_lin_cv.txt" , cv( nflow_srs_lin ) )
-  # verify_output( "output/nflow_srs_rep_cv.txt" , cv( nflow_srs_rep ) )
-
-} )
+# # check for consistency across versions
+# test_that( "version-consistency tests" , {
+#
+#   # point estimates
+#   verify_output( "output/gflow_srs_lin_coef.txt" , coef( gflow_srs_lin ) )
+#   verify_output( "output/gflow_srs_rep_coef.txt" , coef( gflow_srs_rep ) )
+#   verify_output( "output/nflow_srs_lin_coef.txt" , coef( nflow_srs_lin ) )
+#   verify_output( "output/nflow_srs_rep_coef.txt" , coef( nflow_srs_rep ) )
+#
+#   # variances
+#   verify_output( "output/gflow_srs_lin_vcov.txt" , vcov( gflow_srs_lin ) )
+#   # verify_output( "output/gflow_srs_rep_vcov.txt" , vcov( gflow_srs_rep ) )
+#   verify_output( "output/nflow_srs_lin_vcov.txt" , vcov( nflow_srs_lin ) )
+#   # verify_output( "output/nflow_srs_rep_vcov.txt" , vcov( nflow_srs_rep ) )
+#
+#   # standard errors
+#   verify_output( "output/gflow_srs_lin_SE.txt" , SE( gflow_srs_lin ) )
+#   # verify_output( "output/gflow_srs_rep_SE.txt" , SE( gflow_srs_rep ) )
+#   verify_output( "output/nflow_srs_lin_SE.txt" , SE( nflow_srs_lin ) )
+#   # verify_output( "output/nflow_srs_rep_SE.txt" , SE( nflow_srs_rep ) )
+#
+#   # coefficients of variation
+#   verify_output( "output/gflow_srs_lin_cv.txt" , cv( gflow_srs_lin ) )
+#   # verify_output( "output/gflow_srs_rep_cv.txt" , cv( gflow_srs_rep ) )
+#   verify_output( "output/nflow_srs_lin_cv.txt" , cv( nflow_srs_lin ) )
+#   # verify_output( "output/nflow_srs_rep_cv.txt" , cv( nflow_srs_rep ) )
+#
+# } )
