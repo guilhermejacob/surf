@@ -5,7 +5,7 @@
 \alias{svyflow.survey.design2}
 \alias{svyflow.svyrep.design}
 \alias{svyflow.surflow.design}
-\title{Summary statistics for repeated sample surveys}
+\title{Gross flow estimation between (exogenous) categories}
 \usage{
 \method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, na.rm, ...)
 
@@ -22,7 +22,7 @@
 )
 }
 \arguments{
-\item{x}{A formula}
+\item{x}{A formula indcating a \emph{factor} variable.}
 
 \item{design}{surflow.design object}
 

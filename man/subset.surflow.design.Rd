@@ -4,7 +4,7 @@
 \alias{subset.surflow.design}
 \title{Subset of surflow}
 \usage{
-\method{subset}{surflow.design}(x, subset, rounds = 0, ...)
+\method{subset}{surflow.design}(x, subset, rounds = 0, on.full.design = FALSE, ...)
 }
 \arguments{
 \item{x}{a surflow design object}
@@ -12,6 +12,8 @@
 \item{subset}{An expression specifying the subpopulation}
 
 \item{rounds}{a vector of integers indicating which round to apply subsetting condition. Defaults to \code{rounds = 0}, and the expression is applied to the first round.}
+
+\item{on.full.design}{A logical, indicating wether the subset should be applied to full design weights. Only meaningful for endogenous categories.}
 
 \item{...}{future expansion}
 }

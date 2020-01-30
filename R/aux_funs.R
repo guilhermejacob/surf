@@ -108,7 +108,7 @@ ComputeQuantiles <- function( incvar , w, p , na.rm ) {
 
 
 # iterative proportional fitting
-ipf <- function( xc , w , tolerance = 1e-9 , max.iter = 500 ) {
+ipf <- function( xc , w , tolerance = 1e-10 , max.iter = 500 ) {
 
   # tabulate
   NN <- stats::xtabs( c(w,0) ~ . , data = rbind(xc , rep(NA,ncol(xc))) , addNA = TRUE , drop.unused.levels = FALSE )
