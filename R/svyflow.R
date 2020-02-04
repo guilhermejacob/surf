@@ -323,7 +323,8 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   if (extra) {
     # transition probabilities
     qq <- t( Reduce( cbind , lapply( lres , function(zz) matrix( t( zz[["p_ij"]] ) ) ) ) )
-    p_var <- diag( survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["p_ij"]] ) ) ) )
+    p_var <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( p_ij ) ) )
+    p_var <- matrix( diag( p_var ) , nrow = nrow( NN ) , ncol = ncol( NN ) , byrow = TRUE )
     pij_res <- p_ij
     class( pij_res ) <- "flowstat"
     attr( pij_res , "var" ) <- p_var
