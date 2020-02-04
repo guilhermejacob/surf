@@ -8,6 +8,7 @@
 #' @param flow.type  type of flow to estimate: "gross" for counts and "net" for probabilities. Defaults to \code{flow.type = "gross"}.
 #' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param max.iter  number of iterations. Defaults to \code{max.iter = 10}.
+#' @param extra  Should initial and transition probabilities be stored? Defaults to \code{extra = FALSE}.
 #' @param na.rm  Should missing variables be dropped? Defaults to \code{na.rm = FALSE}. See details for further information.
 #' @param ...  future expansion.
 #'
@@ -61,7 +62,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , na.rm , ... ){
+svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , extra , na.rm , ... ){
 
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
@@ -148,9 +149,18 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     - sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , (p_ij[i,] / colSums( nipij ))^2 , "*" ) ) )
   }
 
-  # # adjusting factor
-  # lin_eta <- sweep( ueta_ik , 2 , jeta_i , "/" )
-  # eta_var <- diag( survey::svyrecvar( ww * lin_eta , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+  if (extra) {
+    # adjusting factor
+    lin_eta <- sweep( ueta_ik , 2 , jeta_i , "/" )
+    # eta_var <- diag( survey::svyrecvar( ww * lin_eta , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+    eta_var <- survey::svyrecvar( ww * lin_eta , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    rm( lin_eta )
+    eta_res <- eta_i
+    colnames( eta_var ) <- rownames( eta_var ) <-  names( eta_res ) <- xlevels
+    class( eta_res ) <- "svystat"
+    attr( eta_res , "var" ) <- eta_var
+    attr( eta_res , "statistic" ) <- "initial probabilities"
+  }
 
   # variance of pij
   up_ijk <- array( 0 , dim = c( nrow(xx) , nrow(NN) , ncol(NN) ) )
@@ -168,14 +178,21 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
       sum( ww * yy[,j,2] * ( 1 - zz[,1] ) )
   }
 
-  # # adjusting factor
-  # lin_pij <- array( 0 , dim = c( nrow(xx) , nrow(NN) , ncol(NN) ) )
-  # lin_pij <- sweep( up_ijk , c(2,3) , jp_ij , "/" )
-  # # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) lin_pij[ , i,j] <- up_ijk[,i,j] / jp_ij[i,j]
-  # lin_pij <- do.call( cbind , lapply( seq_len(ncol( NN)) , function( z ) lin_pij[,z,] ) )
-  # p_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-  # p_var <- matrix( p_var , nrow = nrow(NN) , ncol = ncol(NN) , byrow = TRUE )
-  #
+  if (extra) {
+    # adjusting factor
+    lin_pij <- array( 0 , dim = c( nrow(xx) , nrow(NN) , ncol(NN) ) )
+    lin_pij <- sweep( up_ijk , c(2,3) , jp_ij , "/" )
+    # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) lin_pij[ , i,j] <- up_ijk[,i,j] / jp_ij[i,j]
+    lin_pij <- do.call( cbind , lapply( seq_len(ncol( NN)) , function( z ) lin_pij[,z,] ) )
+    p_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+    p_var <- matrix( p_var , nrow = nrow(NN) , ncol = ncol(NN) , byrow = TRUE )
+    rm( lin_pij )
+    pij_res <- p_ij
+    # colnames( p_var ) <- rownames( p_var ) <-  names( pij_res ) <- xlevels
+    class( pij_res ) <- "flowstat"
+    attr( pij_res , "var" ) <- p_var
+    attr( pij_res , "statistic" ) <- "transition probabilities"
+  }
   # # variance of NN
   # lin_nnij <- do.call( cbind , lapply( seq_len(ncol( NN)) , function( z ) nnij_k[,z,] ) )
   # NN_var <- diag( survey::svyrecvar( ww * lin_nnij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
@@ -219,6 +236,8 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   attr( rval , "rounds" )    <- rounds
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
+  attr( rval , "eta" ) <- if (extra) eta_res else NULL
+  attr( rval , "pij" ) <- if (extra) pij_res else NULL
   rval
 
 }
@@ -226,7 +245,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
 #' @export
 #' @rdname svyflow
 #' @method svyflow svyrep.design
-svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , na.rm , ... ){
+svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , extra , na.rm , ... ){
 
   # collect data
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
@@ -301,10 +320,24 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
 
   } )
 
-  # qq <- Reduce( rbind , lapply( lres , function(zz) zz[["eta_i"]] ) )
-  # sqrt( diag( survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["eta_i"]] ) ) ) ) )
-  # qq <- t( Reduce( cbind , lapply( lres , function(zz) matrix( t( zz[["p_ij"]] ) ) ) ) )
-  # sqrt( diag( survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["p_ij"]] ) ) ) ) )
+  if (extra) {
+    # transition probabilities
+    qq <- t( Reduce( cbind , lapply( lres , function(zz) matrix( t( zz[["p_ij"]] ) ) ) ) )
+    p_var <- diag( survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["p_ij"]] ) ) ) )
+    pij_res <- p_ij
+    class( pij_res ) <- "flowstat"
+    attr( pij_res , "var" ) <- p_var
+    attr( pij_res , "statistic" ) <- "transition probabilities"
+
+    # initial probabilities
+    qq <- Reduce( rbind , lapply( lres , function(zz) zz[["eta_i"]] ) )
+    eta_var <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["eta_i"]] ) ) )
+    eta_res <- eta_i
+    colnames( eta_var ) <- rownames( eta_var ) <-  names( eta_res ) <- xlevels
+    class( eta_res ) <- "svystat"
+    attr( eta_res , "var" ) <- eta_var
+    attr( eta_res , "statistic" ) <- "initial probabilities"
+  }
 
   # decompose list
   reps <- lapply( lres , function(zz) zz[[flow.type]] )
@@ -323,6 +356,8 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   attr( rval , "rounds" )    <- rounds
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
+  attr( rval , "eta" ) <- if (extra) eta_res else NULL
+  attr( rval , "pij" ) <- if (extra) pij_res else NULL
   rval
 
 }
@@ -330,10 +365,10 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
 #' @export
 #' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , na.rm = FALSE , ... ) {
+svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , extra = FALSE , na.rm = FALSE , ... ) {
   flow.type <- match.arg( flow.type , c( "gross" , "net" ) )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-  NextMethod( "svyflow" , design = design , flow.type = flow.type , rounds = rounds , max.iter = max.iter , na.rm = na.rm , ... )
+  NextMethod( "svyflow" , design = design , flow.type = flow.type , rounds = rounds , max.iter = max.iter , extra = extra , na.rm = na.rm , ... )
 }
 
 #' @export

@@ -6,6 +6,8 @@ coef.flowstat <- function( object , ... ) {
   attr(object, "rounds") <- NULL
   attr(object, "formula") <- NULL
   attr(object, "has.order") <- NULL
+  attr(object, "eta") <- NULL
+  attr(object, "pij") <- NULL
   unclass(object)
 }
 
