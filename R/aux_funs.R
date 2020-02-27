@@ -108,7 +108,7 @@ ComputeQuantiles <- function( incvar , w, p , na.rm ) {
 
 
 # iterative proportional fitting
-ipf <- function( xc , w , tolerance = 1e-10 , max.iter = 500 ) {
+ipf <- function( xc , w , max.iter = 100 ) {
 
   # tabulate
   NN <- stats::xtabs( c(w,0) ~ . , data = rbind(xc , rep(NA,ncol(xc))) , addNA = TRUE , drop.unused.levels = FALSE )
@@ -133,6 +133,7 @@ ipf <- function( xc , w , tolerance = 1e-10 , max.iter = 500 ) {
 
   # iterative process
   v = 0
+  cat( "\n")
   while( v < max.iter ) {
     # calculate values
     nipij_v <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
@@ -140,7 +141,9 @@ ipf <- function( xc , w , tolerance = 1e-10 , max.iter = 500 ) {
     p_ijv <- sweep( NN + sweep( nipij_v , 2 , CC / colSums( nipij_v ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij_v , 2 , CC / colSums( nipij_v ) , "*" ) ) , "/" )
     max.diff = max( abs( as.vector( nipij_v - nipij_o ) ) )
     v <- v + 1
-    if ( max.diff <= tolerance ) break() else nipij_o <- nipij_v
+    # cat("iteration:" , v , " \r" )
+    # if ( max.diff <= tolerance ) break() else nipij_o <- nipij_v
+    if ( FALSE ) break() else nipij_o <- nipij_v
   }
 
   # return converged

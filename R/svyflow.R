@@ -193,6 +193,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     attr( pij_res , "var" ) <- p_var
     attr( pij_res , "statistic" ) <- "transition probabilities"
   }
+
   # # variance of NN
   # lin_nnij <- do.call( cbind , lapply( seq_len(ncol( NN)) , function( z ) nnij_k[,z,] ) )
   # NN_var <- diag( survey::svyrecvar( ww * lin_nnij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
