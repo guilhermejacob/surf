@@ -80,9 +80,54 @@ print.surflow.design <-function(x, varnames=TRUE,design.summaries=FALSE,...){
 }
 
 #' @exportS3Method print flowstat
-print.flowstat <- function( x , ... ) {
-   x <- round( x , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
-  stats::printCoefmat( x , ... )
+print.flowstat <- function( x , var.type = c("se","var","cv") , ... ) {
+
+  # variance type
+  var.type <- match.arg( var.type )
+
+  # model type
+  model.type = "A"
+
+  # collect coefficients
+  cmat <- round( x , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
+
+  # collect standard-errors, variance, and cv
+  smat <- round( SE( x ) , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
+  vmat <- round( vcov( x ) , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
+  cvmat <- round( SE( x ) / cmat , digits = 4 )
+
+  # print flow estimates header
+  cat(paste0("\n", attr( x , "statistic" ) , " flow estimates\n\n" ) )
+  # cat(paste0("\n", attr( x , "statistic" ) , " flow estimates under Model: ", model.type , "\n\n" ) )
+
+  # print estimates
+  cat("estimates:\n")
+  stats::printCoefmat( cmat , ... )
+
+  # print standard-errors
+  cat(paste0("\n",
+             switch( var.type ,
+                     se = "standard-errors" ,
+                     var = "variances" ,
+                     cv = "coefficients of variation" )
+             , ":\n"))
+  switch( var.type ,
+          se = stats::printCoefmat( smat , ... ) ,
+          var = stats::printCoefmat( vmat , ... ) ,
+          cv = stats::printCoefmat( cvmat , ... ) )
+
+  if ( !is.null( attr( x , "psi" ) ) ) {
+
+    # print model estimates header
+    cat(paste0("\nNon-response correction: Model " , model.type , "\n" ) )
+
+    # model parameters
+    print( attr( x , "psi" ) )
+    print( attr( x , "rhoRR" ) )
+    print( attr( x , "rhoMM" ) )
+
+  }
+
 }
 
 #' @exportS3Method summary surflow.design
