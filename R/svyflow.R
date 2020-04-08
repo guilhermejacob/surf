@@ -8,7 +8,7 @@
 #' @param flow.type  type of flow to estimate: "gross" for counts and "net" for probabilities. Defaults to \code{flow.type = "gross"}.
 #' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param max.iter  number of iterations. Defaults to \code{max.iter = 10}.
-#' @param extra  Should initial and transition probabilities be stored? Defaults to \code{extra = FALSE}.
+#' @param extra  Should initial and transition probabilities be stored? Defaults to \code{extra = TRUE}.
 #' @param na.rm  Should missing variables be dropped? Defaults to \code{na.rm = FALSE}. See details for further information.
 #' @param ...  future expansion.
 #'
@@ -64,26 +64,30 @@
 #' @method svyflow survey.design2
 svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter , extra , na.rm , ... ){
 
-  # collect data
+  # Collect sample data and put in single data frame
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
   xx <- do.call( cbind , xx )
 
-  # test column format
+  # Test column format
   if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
+  # Gets levels of factors for both time periods
   xlevels <- lapply( xx , function(zz) levels( zz ) )
+  # Gets dimension of variable for which flows are to be estimated
   ll <- lapply( xlevels , function(zz) length( zz ) )
   if ( !all( ll[[1]] == ll[[2]] && xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
+  # When levels are the same across periods, returns unique levels of variable for which flows are to be estimated
   xlevels <- unique( unlist(xlevels) )
+  # Gets dimension of variable for which flows are to be estimated
   ll <- unique( unlist(ll) )
   has.order <- ifelse( all( sapply( xx , is.ordered ) ) , TRUE , FALSE )
 
-  # add time frame
+  # Revise names of columns on sample response data set
   colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) - 1 , ":" , colnames( xx ) )
 
-  # collect weights
-  ww <- 1 / design$prob
+  # Collect weights
+  ww <-  weights(design)
 
-  # aggregate
+  # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
   NN <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
   RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
   CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
@@ -91,7 +95,7 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
   N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
 
-  # handling missing
+  # Handle missing data under certain conditions
   if ( sum( MM , RR , CC ) > 0 && !na.rm ) {
     # format results
     NN[,] <- NA
@@ -106,35 +110,87 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     return(rval)
   }
 
-  # model fitting
+  # Perform estimation of model parameters from observed sample
   res <- ipf( xx , ww )
 
-  # collect results
+  # Collect results of point estimates for response model parameters
+  psi <- res[["psi"]]
+  rhoRR <- res[["rhoRR"]]
+  rhoMM <- res[["rhoMM"]]
+
+  # Collect results of point estimates for model superpopulation model parameters
   eta_i <- res[["eta_i"]]
   p_ij <- res[["p_ij"]]
-  N <- res[["N"]]
-  nipij <- res[["nipij"]]
+
+  # auxiliary estimates
+  nipij <- sweep( p_ij , 1 , eta_i , FUN = "*" )
   mu_ij <- N * nipij
   if ( any( mu_ij == 0 ) ) warning( "Some flows are equal to zero. Variances are inconsistent." )
 
-  ### variance calculations
+  ### Variance calculations
 
-  # yy array
+  # yy array - see Rojas et al. (2014, p.294)
   yy <- array( 0  , dim = c( nrow( xx ) , ll , ncol( xx ) ) )
   for ( r in seq_len( ncol( xx ) ) ) {
     kk <- stats::model.matrix( ~-1+. , data = xx[,r,drop = FALSE] , contrasts.arg = lapply( xx[,r, drop = FALSE ] , stats::contrasts, contrasts=FALSE ) , na.action = stats::na.pass )
     yy[ which( !is.na( xx[ , r ] ) ) , , r ] <- kk ; rm( kk )
   }
 
-  # create matrix of z variables
+  # Create matrix of z variables - see Rojas et al. (2014, p.294)
   zz <- apply( xx , 2 , function(z) as.numeric( !is.na(z) ) )
 
-  ### special variables
+  ### Special variables - see Rojas et al. (2014, p.295)
   vv_k <- rowSums( yy[,,1] ) * rowSums( yy[,,2] ) + rowSums( yy[,,2] * (1 - zz[,1]) ) + rowSums( yy[,,1] * (1 - zz[,2]) ) + ( 1- zz[,1] ) * ( 1- zz[,2] )
   nnij_k <- array( 0  , dim = c( nrow( xx ) , nrow( NN ) , ncol( NN ) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) nnij_k[,i,j] <- yy[,i,1] * yy[,j,2]
 
-  ### variance of eta
+  # Calculate scores for estimating the variance of psi parameter,
+  #  i.e., the initial probability of an individual in cell ij responding at time t−1
+  # - see Rojas et al. (2014) Result 5.11, p.301
+  if (extra) {
+    a1 <- ( sum( CC ) + MM ) / ( sum( NN ) + sum( RR ) + sum( CC ) + MM )^2
+    a2 <- ( sum( NN ) + sum( RR ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) + MM )^2
+    e_psi_k <- a1 * ( 2 - zz[,2] ) + a2 * ( 1 - zz[,1] ) * ( 2 - zz[,2] )
+    psi_var <- survey::svyrecvar( ww * e_psi_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    colnames( psi_var ) <- rownames( psi_var ) <- "psi"
+    psi_res <- psi
+    class( psi_res ) <- "svystat"
+    attr( psi_res , "var" ) <- psi_var
+    attr( psi_res , "statistic" ) <- "psi"
+  }
+
+  # Calculate scores for estimating the variance of rhoRR parameter,
+  # i.e., the transition probability of classification of the individual in cell ij responding at time t−1 and responding at time t
+  # - see Rojas et al. (2014) Result 5.11, p.301
+  if (extra) {
+    a3 <- sum( RR ) / ( sum( NN ) + sum( RR ) )^2
+    a4 <- sum( NN ) / ( sum( NN ) + sum( RR ) )^2
+    e_rhoRR_k <- a3 + a4 * ( 1 - zz[,2] )
+    rhoRR_var <- survey::svyrecvar( ww * e_rhoRR_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    colnames( rhoRR_var ) <- rownames( rhoRR_var ) <- "rhoRR"
+    rhoRR_res <- rhoRR
+    class( rhoRR_res ) <- "svystat"
+    attr( rhoRR_res , "var" ) <- rhoRR_var
+    attr( rhoRR_res , "statistic" ) <- "rhoRR"
+  }
+
+  # Calculate scores for estimating the variance of rhoMM parameter,
+  # i.e., the transition probability of an individual in cell ij being a nonrespondent at time t−1 and becoming a nonrespondent at time t
+  # - see Rojas et al. (2014) Result 5.11, p.301
+  if (extra) {
+    a5 <- MM / ( sum( CC ) + MM )^2
+    a6 <- sum( CC ) / ( sum( CC ) + MM )^2
+    e_rhoMM_k <- a5 * ( 1 - zz[,1] ) + a2 * ( 1 - zz[,1] ) * ( 1 - zz[,2] )
+    rhoMM_var <- survey::svyrecvar( ww * e_rhoMM_k , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    colnames( rhoMM_var ) <- rownames( rhoMM_var ) <- "rhoMM"
+    rhoMM_res <- rhoMM
+    class( rhoMM_res ) <- "svystat"
+    attr( rhoMM_res , "var" ) <- rhoMM_var
+    attr( rhoMM_res , "statistic" ) <- "rhoMM"
+  }
+
+  # Calculate scores for estimating the variance of eta_i parameters
+  # - see Rojas et al. (2014) Result 5.13, p.303
   ueta_ik <- array( 0 , dim = c( nrow(xx) , nrow(NN) ) )
   for ( i in seq_len( nrow(NN) ) ) {
     ueta_ik[,i] <-
@@ -143,6 +199,8 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
       (1 - zz[,1]) * (1 - zz[,2])
   }
 
+  # Calculate jacobian for estimating the variance of eta_i parameters
+  # - see Rojas et al. (2014) Result 5.13, p.303
   jeta_i <- vector( "numeric" , length = nrow(NN) )
   for ( i in seq_len( nrow(NN) ) ) {
     jeta_i[i] <- ( sum( ww * yy[,i,1] * zz[,2] ) - 2 * sum( ww * yy[,i,1] ) ) / ( eta_i[i]^2 )
@@ -162,7 +220,8 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     attr( eta_res , "statistic" ) <- "initial probabilities"
   }
 
-  # variance of pij
+  # Calculate scores for estimating the variance of p_ij parameters
+  # - see Rojas et al. (2014) Result 5.13, p.303
   up_ijk <- array( 0 , dim = c( nrow(xx) , nrow(NN) , ncol(NN) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
     up_ijk[,i,j] <- ( nnij_k[,i,j] / p_ij[i,j] ) +
@@ -171,6 +230,8 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
       ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta_i[ i ]
   }
 
+  # Calculate jacobian for estimating the variance of p_ij parameters
+  # - see Rojas et al. (2014) Result 5.13, p.303
   jp_ij <- array( 0 , dim = c( nrow(NN) , ncol(NN) ) )
   for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
     jp_ij[i,j] <- - sum( ww * nnij_k[,i,j] ) / ( p_ij[i,j]^2 ) -
@@ -178,7 +239,8 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
       sum( ww * yy[,j,2] * ( 1 - zz[,1] ) )
   }
 
-  if (extra) {
+  if ( extra ) {
+
     # adjusting factor
     lin_pij <- array( 0 , dim = c( nrow(xx) , nrow(NN) , ncol(NN) ) )
     lin_pij <- sweep( up_ijk , c(2,3) , jp_ij , "/" )
@@ -192,13 +254,14 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
     class( pij_res ) <- "flowstat"
     attr( pij_res , "var" ) <- p_var
     attr( pij_res , "statistic" ) <- "transition probabilities"
+
   }
 
-  # # variance of NN
-  # lin_nnij <- do.call( cbind , lapply( seq_len(ncol( NN)) , function( z ) nnij_k[,z,] ) )
-  # NN_var <- diag( survey::svyrecvar( ww * lin_nnij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-  # NN_var <- matrix( NN_var , nrow = nrow(NN) , ncol = ncol(NN) , byrow = TRUE )
-  #
+  # variance of NN
+  lin_nnij <- do.call( cbind , lapply( seq_len(ncol( NN)) , function( z ) nnij_k[,z,] ) )
+  NN_var <- diag( survey::svyrecvar( ww * lin_nnij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+  NN_var <- matrix( NN_var , nrow = nrow(NN) , ncol = ncol(NN) , byrow = TRUE )
+
   # # a variables
   # mu_var <- matrix( as.numeric(NA) , nrow = nrow(NN) , ncol = ncol(NN) )
   # for ( i in seq_len( nrow(NN) ) ) for ( j in seq_len( ncol( NN ) ) ) {
@@ -239,6 +302,9 @@ svyflow.survey.design2 <- function( x , design , flow.type , rounds , max.iter ,
   attr( rval , "has.order" )   <- has.order
   attr( rval , "eta" ) <- if (extra) eta_res else NULL
   attr( rval , "pij" ) <- if (extra) pij_res else NULL
+  attr( rval , "psi" ) <- if (extra) psi_res else NULL
+  attr( rval , "rhoRR" ) <- if (extra) rhoRR_res else NULL
+  attr( rval , "rhoMM" ) <- if (extra) rhoMM_res else NULL
   rval
 
 }
@@ -294,11 +360,14 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   res <- ipf( xx , ww )
 
   # collect results
-  nipij <- res[["nipij"]]
   eta_i <- res[["eta_i"]]
   p_ij <- res[["p_ij"]]
+  psi <- res[["psi"]]
+  rhoRR <- res[["rhoRR"]]
+  rhoMM <- res[["rhoMM"]]
+  nipij <- sweep( p_ij , 1 , eta_i , FUN = "*" )
   rval <- if ( flow.type == "gross" ) N * nipij else nipij
-  if ( any( (N * nipij) == 0 ) ) warning( "Some flows are equal to zero. Variances are inconsistent." )
+  if ( any( ( N * nipij ) == 0 ) ) warning( "Some flows are equal to zero. Variances are inconsistent." )
 
   ### variance calculations
 
@@ -312,16 +381,20 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
     res_rep <- ipf( xx , wr[ , irep ] )
 
     # collect res_repults
-    nipij_r <- res_rep[["nipij"]]
     eta_i_r <- res_rep[["eta_i"]]
     p_ij_r <- res_rep[["p_ij"]]
-    N_r <- res_rep[["N"]]
+    nipij_r <-   nipij_v <- sweep( p_ij_r , 1 , eta_i_r , FUN = "*" )
+    N_r <- sum( wr[ , irep ] )
 
-    list( "gross" = nipij_r * N_r , "net" = nipij_r , "eta_i" = eta_i_r , "p_ij" = p_ij_r )
+    # return results
+    list( "gross" = nipij_r * N_r , "net" = nipij_r , "eta_i" = eta_i_r , "p_ij" = p_ij_r ,
+          psi = res_rep[["psi"]] , rhoRR = res_rep[["rhoRR"]] , rhoMM = res_rep[["rhoMM"]] )
 
   } )
 
+  # additional attributes
   if (extra) {
+
     # transition probabilities
     qq <- t( Reduce( cbind , lapply( lres , function(zz) matrix( t( zz[["p_ij"]] ) ) ) ) )
     p_var <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( p_ij ) ) )
@@ -339,6 +412,34 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
     class( eta_res ) <- "svystat"
     attr( eta_res , "var" ) <- eta_var
     attr( eta_res , "statistic" ) <- "initial probabilities"
+
+    # initial probability of an individual in cell ij responding at time t − 1
+    qq <- Reduce( rbind , lapply( lres , function(zz) zz[["psi"]] ) )
+    psi_var <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["psi"]] ) ) )
+    colnames( psi_var ) <- rownames( psi_var ) <- "psi"
+    psi_res <- psi
+    class( psi_res ) <- "svystat"
+    attr( psi_res , "var" ) <- psi_var
+    attr( psi_res , "statistic" ) <- "psi"
+
+    # transition probability of classification of the individual in cell ij responding at time t − 1 and responding at time t
+    qq <- Reduce( rbind , lapply( lres , function(zz) zz[["rhoRR"]] ) )
+    rhoRR_var <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["rhoRR"]] ) ) )
+    colnames( rhoRR_var ) <- rownames( rhoRR_var ) <- "rhoRR"
+    rhoRR_res <- rhoRR
+    class( rhoRR_res ) <- "svystat"
+    attr( rhoRR_res , "var" ) <- rhoRR_var
+    attr( rhoRR_res , "statistic" ) <- "rhoRR"
+
+    # transition probability of an individual in cell ij being a nonrespondent at time t − 1 and becoming a nonrespondent at time t
+    qq <- Reduce( rbind , lapply( lres , function(zz) zz[["rhoMM"]] ) )
+    rhoMM_var <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( res[["rhoMM"]] ) ) )
+    colnames( rhoMM_var ) <- rownames( rhoMM_var ) <- "rhoMM"
+    rhoMM_res <- rhoMM
+    class( rhoMM_res ) <- "svystat"
+    attr( rhoMM_res , "var" ) <- rhoMM_var
+    attr( rhoMM_res , "statistic" ) <- "rhoMM"
+
   }
 
   # decompose list
@@ -360,6 +461,9 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
   attr( rval , "has.order" )   <- has.order
   attr( rval , "eta" ) <- if (extra) eta_res else NULL
   attr( rval , "pij" ) <- if (extra) pij_res else NULL
+  attr( rval , "psi" ) <- if (extra) psi_res else NULL
+  attr( rval , "rhoRR" ) <- if (extra) rhoRR_res else NULL
+  attr( rval , "rhoMM" ) <- if (extra) rhoMM_res else NULL
   rval
 
 }
@@ -367,7 +471,7 @@ svyflow.svyrep.design <- function( x , design , flow.type , rounds , max.iter , 
 #' @export
 #' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , extra = FALSE , na.rm = FALSE , ... ) {
+svyflow.surflow.design <- function( x , design , flow.type = NULL , rounds = c(0,1) , max.iter = 10 , extra = TRUE , na.rm = FALSE , ... ) {
   flow.type <- match.arg( flow.type , c( "gross" , "net" ) )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
   NextMethod( "svyflow" , design = design , flow.type = flow.type , rounds = rounds , max.iter = max.iter , extra = extra , na.rm = na.rm , ... )

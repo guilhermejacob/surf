@@ -1,42 +1,86 @@
-# código for simple random sample without replacement
+# código para pseudo população
 
-# set random seed
+# gerador aleatório
 set.seed(123)
 
-# create pseudo-population
+### PARÂMETROS DA SIMULAÇÃO
+
+# define parâmetros da população artificial
 N = 10^5
-n = round(N *.05)
-eta_pop <- c(.9,.05,.05)
-pij_pop <- matrix( c(0.8, 0.15, 0.05, 0.3, 0.6, 0.1, 0.1, 0.1, 0.8) , ncol = 3 , nrow = 3 , byrow = T )
+eta_pop <- c( .9 , .05, .05 )
+pij_pop <- matrix( c(.80, .15, .05, .30, .60, .10, .10, .10, .80 ) , ncol = 3 , nrow = 3 , byrow = T )
 nipij_pop <- sweep( pij_pop , 1 , eta_pop , "*" )
 muij_pop <- nipij_pop * N
-pop <- as.numeric( muij_pop )
-pop <- data.frame( k_ij = do.call( c , sapply( seq_along( pop ), function(z) rep( z , pop[z] ) ) ) )
-pop_frame <- expand.grid( data.frame( v0 = seq_len( nrow(nipij_pop) ) , v1 = seq_len( nrow(nipij_pop) ) ) )
-pop_frame <- cbind( k_ij = seq_len( nrow( pop_frame ) ) , pop_frame )
-pop_frame <- merge( pop , pop_frame )[ , -1 ] ; rm( pop )
 
-# create covariates
-pop_frame$v2 <- ifelse( pop_frame$v0 == 1 , rbinom( nrow( pop_frame ) , 1 , .7 ) , rbinom( nrow( pop_frame ) , 1 , .3 ) ) + 1
-pop_frame$v3 <- ifelse( pop_frame$v0 == 1 , rbinom( nrow( pop_frame ) , 1 , .7 ) , rbinom( nrow( pop_frame ) , 1 , .3 ) ) + 1
-pop_frame <- pop_frame[ order( pop_frame$v1 ) , ]
-pop_frame <- data.frame( apply(pop_frame[,] , 2 , factor) , stringsAsFactors = TRUE )
+# matriz de classificações
+class_table <- expand.grid( data.frame( v0 = seq_len( nrow(nipij_pop) ) , v1 = seq_len( nrow(nipij_pop) ) ) )
+class_table <- class_table[ order( class_table$v0 ) , ]
+class_table[ ,"k_ij" ] <- as.character( seq_len( nrow( class_table ) ) )
 
-# adds non-response
-pop_frame[ as.logical( rbinom(N,1,.2) ) , 1 ] <- NA
-pop_frame[ !is.na( pop_frame[,1] ) & as.logical( rbinom(N,1,.1) ) , 2 ] <- NA
-pop_frame[ is.na( pop_frame[,2] ) & as.logical( rbinom(N,1,.7) ) , 1 ] <- NA
+# define tamaho da amostra
+n = as.integer(10^4)
 
-# extract sample
-smp_frame <- pop_frame[ as.logical( sampling::srswor( n , N ) ) , ]
-rm( pop_frame )
+# padrão de não resposta
+pop_psi <- .8
+pop_rhoRR <- .9
+pop_rhoMM <- .7
 
-# splits data
-dfa0 <- smp_frame[ , c(1,3) ]
-colnames(dfa0) <- c("v0","v1")
-dfa0$prob <- n/N
-dfa1 <- smp_frame[ , c(2,4) ]
-colnames(dfa1) <- c("v0","v1")
+### GERA POPULAÇÃO ARTIFICIAL
+
+# gera população de tamanho N
+pop_fullresponse <- t( rmultinom( as.integer( N ) , size = 1 , prob = as.numeric( t( nipij_pop ) ) ) )
+
+# transforma em tipologia de transições
+pop_fullresponse <- apply( pop_fullresponse , 1 , function( z ) seq_len( ncol( pop_fullresponse ) )[ as.logical( z ) ] )
+
+# transforma em transição de categorias
+pop_fullresponse <- data.frame( "id" = seq_len( N ) , "k_ij" = pop_fullresponse , row.names = NULL , stringsAsFactors = FALSE )
+
+# combina com classificação de transições
+pop_fullresponse <- merge( pop_fullresponse , class_table , by = c( "k_ij" ) , all.x = TRUE , all.y = FALSE , sort = TRUE )
+
+# reordena para posoções originais
+pop_fullresponse <- pop_fullresponse[ order( pop_fullresponse$id ) , ]
+
+# remove nome das linhas
+rownames( pop_fullresponse ) <- NULL
+
+# transforma categorias em factors
+pop_fullresponse[, c( "v0" , "v1" ) ] <- lapply( pop_fullresponse[, c( "v0" , "v1" ) ] , factor , levels = c( 1:3 ) , labels = 1:3 )
+
+### APLICA PROCESSO ESTOCÁSTICO DE NÃO-RESPOSTA
+
+# copia população com resposta completa
+pop_nonrespose <- pop_fullresponse
+
+# adiciona não-resposta aleatória no tempo t-1
+pop_nonrespose[ as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - pop_psi ) ) , "v0" ] <- NA
+
+# adiciona não-resposta no tempo t para os indivíduos respondentes no tempo t-1
+pop_nonrespose[ !is.na( pop_nonrespose[,"v0"] ) & as.logical( rbinom( nrow( pop_nonrespose ) , 1 , 1 - pop_rhoRR ) ) , "v1" ] <- NA
+
+# adiciona não-resposta no tempo t para os indivíduos não-respondentes no tempo t-1
+pop_nonrespose[  is.na( pop_nonrespose[,"v0"] ) & as.logical( rbinom( nrow( pop_nonrespose ) , 1, pop_rhoMM ) ) , "v1" ] <- NA
+
+### EXTRAI AMOSTRA
+
+# extrai amostra de n observações
+smp_df <- pop_nonrespose[ as.logical( rbinom( n , 1 , n / N ) ) , c( "v0" , "v1" ) ]
+
+# cria informações do desenho amostral
+smp_df$prob <- N / n            # peso
+smp_df$fpcs <- as.integer( N )  # correção de população finita
+
+# CRIA INFORMAÇÕES
+
+# cria bases de dados pareadas
+dfa0 <- smp_df[ , -2 , drop = FALSE ]
+dfa1 <- smp_df[ , 2 , drop = FALSE ]
+colnames( dfa0 )[1] <- "y"
+colnames( dfa1 )[1] <- "y"
+
+# remove objetos
+rm( pop_fullresponse , pop_nonrespose , smp_df ) ; gc()
 
 # save results
 save( list = c("dfa0","dfa1") , file = "data/artificial.rda" , compress = "xz" )

@@ -7,9 +7,9 @@
 \alias{svyflow.surflow.design}
 \title{Gross flow estimation between (exogenous) categories}
 \usage{
-\method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, na.rm, ...)
+\method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, extra, na.rm, ...)
 
-\method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, na.rm, ...)
+\method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, extra, na.rm, ...)
 
 \method{svyflow}{surflow.design}(
   x,
@@ -17,6 +17,7 @@
   flow.type = NULL,
   rounds = c(0, 1),
   max.iter = 10,
+  extra = FALSE,
   na.rm = FALSE,
   ...
 )
@@ -31,6 +32,8 @@
 \item{rounds}{a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.}
 
 \item{max.iter}{number of iterations. Defaults to \code{max.iter = 10}.}
+
+\item{extra}{Should initial and transition probabilities be stored? Defaults to \code{extra = FALSE}.}
 
 \item{na.rm}{Should missing variables be dropped? Defaults to \code{na.rm = FALSE}. See details for further information.}
 

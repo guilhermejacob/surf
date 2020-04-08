@@ -107,10 +107,10 @@ ComputeQuantiles <- function( incvar , w, p , na.rm ) {
 }
 
 
-# iterative proportional fitting
+# Create function to perform estimation (by interative proportional fitting) of model parameters from observed sample
 ipf <- function( xc , w , max.iter = 100 ) {
 
-  # tabulate
+  # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
   NN <- stats::xtabs( c(w,0) ~ . , data = rbind(xc , rep(NA,ncol(xc))) , addNA = TRUE , drop.unused.levels = FALSE )
   RR <- NN[ , ncol(NN) ][ - nrow( NN ) ]
   CC <- NN[ nrow(NN) , ][ - ncol( NN ) ]
@@ -118,35 +118,37 @@ ipf <- function( xc , w , max.iter = 100 ) {
   NN <- as.matrix( NN[ -nrow( NN ) , -ncol( NN ) ] )
   N  <- sum( NN ) + sum( RR ) + sum( CC ) + MM
 
-  # maximum pseudo-likelihood estimates for psi, rhoRR, and rhoMM (Rojas et al., 2014, p.296 , Result 4.2 )
+  # Obtain maximum pseudo-likelihood estimates for response model parameters
+  # psi, rhoRR, and rhoMM according to Result 4.2 of Rojas et al. (2014, p.296)
   psi <- ( sum( NN ) + sum( RR ) ) / N
   rhoRR <- sum( NN ) / ( sum( NN ) + sum( RR ) )
-  rhoMM <- MM / (sum( CC ) + MM )
+  rhoMM <- MM / ( sum( CC ) + MM )
 
-  ### maximum pseudo-likelihood estimates for eta_i and p_ij (Rojas et al., 2014, p.296 , Result 4.3 )
-
-  # starting values, using Chen and Fienberg (1974) reccomendation
+  # Obtain starting values for estimating superpopulation model flow parameters
+  # eta_i and p_ij according to Result 4.3 of Rojas et al. (2014, p.297)
   eta_iv <- rowSums( NN ) / sum( NN )
   p_ijv   <- sweep( NN , 1 , rowSums( NN ) , "/" )
+  nipij_v <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
+
+  # create matrix to store results
   nipij_o <- NN
   nipij_o[,] <- 1/prod( dim( NN ) )
 
+  # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
+  # eta_i and p_ij according to Result 4.3 of Rojas et al. (2014, p.296)
   # iterative process
   v = 0
-  cat( "\n")
   while( v < max.iter ) {
     # calculate values
-    nipij_v <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
     eta_iv <- ( rowSums( NN ) + RR + rowSums( sweep( nipij_v , 2 , CC / colSums( nipij_v ) , "*" ) ) ) / ( sum( NN ) + sum( RR ) + sum( CC ) )
     p_ijv <- sweep( NN + sweep( nipij_v , 2 , CC / colSums( nipij_v ) , "*" ) , 1:2 , rowSums( NN ) + rowSums( sweep( nipij_v , 2 , CC / colSums( nipij_v ) , "*" ) ) , "/" )
     max.diff = max( abs( as.vector( nipij_v - nipij_o ) ) )
+    nipij_v <- sweep( p_ijv , 1 , eta_iv , FUN = "*" )
     v <- v + 1
-    # cat("iteration:" , v , " \r" )
-    # if ( max.diff <= tolerance ) break() else nipij_o <- nipij_v
     if ( FALSE ) break() else nipij_o <- nipij_v
   }
 
-  # return converged
-  return( list( nipij = nipij_v , eta_i = eta_iv , p_ij = p_ijv , N = N ) )
+  # Return estimates obtained
+  return( list( eta_i = eta_iv , p_ij = p_ijv , psi = psi, rhoRR = rhoRR, rhoMM = rhoMM ) )
 
 }
