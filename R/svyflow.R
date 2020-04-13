@@ -80,7 +80,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   ww <-  stats::weights( design )
 
   # model fitting
-  mfit <- surf:::ipf( xx , ww , model = model )
+  mfit <- ipf( xx , ww , model = model )
 
   # variance estimation
   mvar <- ipf_variance( xx , ww , res = mfit , design = design )
@@ -110,6 +110,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   attr( rval , "rounds" )    <- rounds
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
+  attr( rval , "iter" )   <- mfit$iter
   rval
 
 }
@@ -144,14 +145,14 @@ svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
   ww <-  stats::weights( design , "sampling" )
 
   # model fitting
-  mfit <- surf:::ipf( xx , ww , model = model )
+  mfit <- ipf( xx , ww , model = model )
 
   # get replication weights
   wr <- stats::weights( design , "analysis" )
 
   # calculate replicates
   lres <- lapply( seq_len(ncol(wr)) , function( irep , model = mfit$model ) {
-    surf:::ipf( xx , wr[,irep] , model = model , starting.values = mfit )
+    ipf( xx , wr[,irep] , model = model , starting.values = mfit )
   } )
 
   # collect replicates
@@ -198,6 +199,7 @@ svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
   attr( rval , "rounds" )    <- rounds
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
+  attr( rval , "iter" )   <- mfit$iter
   rval
 
 }
