@@ -1,8 +1,5 @@
 # function for model fitting
-ipf <- function( xx , ww , model = c( "A" , "B" , "C" , "D" ) , tol = 1e-8 , verbose = FALSE , starting.values = list( psi = NULL , rhoRR = NULL , rhoMM = NULL , eta = NULL , pij = NULL ) ) {
-
-  # select model
-  model <- match.arg( model , several.ok = FALSE )
+ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.values = list( psi = NULL , rhoRR = NULL , rhoMM = NULL , eta = NULL , pij = NULL ) ) {
 
   # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
   bigNij <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
@@ -342,6 +339,9 @@ ipf <- function( xx , ww , model = c( "A" , "B" , "C" , "D" ) , tol = 1e-8 , ver
     # return list of results
     return( res )
   } )
+
+  # verbose treat
+  if (verbose) cat( "\n\n" )
 
   # return fit
   mfit

@@ -80,7 +80,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   ww <-  stats::weights( design )
 
   # model fitting
-  mfit <- ipf( xx , ww , model = model )
+  mfit <- ipf( xx , ww , model = model , ... )
 
   # variance estimation
   mvar <- ipf_variance( xx , ww , res = mfit , design = design )
@@ -145,7 +145,7 @@ svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
   ww <-  stats::weights( design , "sampling" )
 
   # model fitting
-  mfit <- ipf( xx , ww , model = model )
+  mfit <- ipf( xx , ww , model = model , tol = tol , verbose = verbose )
 
   # get replication weights
   wr <- stats::weights( design , "analysis" )
@@ -207,10 +207,10 @@ svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
 #' @export
 #' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D") , ... ) {
+svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D") , tol = 1e-8 , verbose = FALSE ) {
   model <- match.arg( model , several.ok = FALSE )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-  NextMethod( "svyflow" , design = design , rounds = rounds , model = model , ... )
+  NextMethod( "svyflow" , design = design , rounds = rounds , model = model , tol = tol , verbose = verbose )
 }
 
 #' @export
