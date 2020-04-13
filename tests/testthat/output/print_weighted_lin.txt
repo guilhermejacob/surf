@@ -1,8 +1,0 @@
-> print(flowdes_strat)
-Stratified Independent Sampling design (with replacement)
-sfydesign(ids = ~0, probs = ~prob, strata = ~stratum, data = list(surf:::dfa0_strat, 
-    surf:::dfa1_strat), nest = TRUE)
-Number of repetitions: 1 
-Data variables:
-[1] "v0"
-

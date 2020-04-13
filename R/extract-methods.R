@@ -1,26 +1,31 @@
-#' @exportS3Method coef flowstat
-coef.flowstat <- function( object , ... ) {
+#' @exportS3Method coef svymstat
+coef.svymstat <- function( object , ... ) {
+  object <- unclass(object)
   attr(object, "statistic") <- NULL
-  attr(object, "deff") <- NULL
   attr(object, "var") <- NULL
-  attr(object, "rounds") <- NULL
-  attr(object, "formula") <- NULL
-  attr(object, "has.order") <- NULL
-  attr(object, "eta" ) <- NULL
-  attr(object, "pij" ) <- NULL
-  attr(object, "psi" ) <- NULL
-  attr(object, "rhoRR" ) <- NULL
-  attr(object, "rhoMM" ) <- NULL
-  unclass(object)
+  object
 }
 
-#' @exportS3Method vcov flowstat
-vcov.flowstat <- function( object , ... ) unclass( attr( object , "var" ) )
+#' @exportS3Method vcov svymstat
+vcov.svymstat <- function( object , ... ) {
+  object <- attr(object, "var")
+  object
+}
 
 #' @importFrom survey SE
-#' @exportS3Method SE flowstat
-SE.flowstat <- function( object , ... ) unclass( sqrt( attr( object , "var" ) ) )
+#' @exportS3Method SE svymstat
+SE.svymstat <- function( object , ... ) {
+  vmat <- attr(object, "var")
+  sqrt( vmat )
+}
 
 #' @importFrom survey cv
-#' @exportS3Method  cv flowstat
-cv.flowstat <- function( object , ... ) SE.flowstat( object ) / coef.flowstat(object)
+#' @exportS3Method  cv svymstat
+cv.svymstat <- function( object , ... ) {
+  cmat <- unclass(object)
+  attr(cmat, "statistic") <- NULL
+  attr(cmat, "var") <- NULL
+  vmat <- attr(object, "var")
+  semat <- sqrt(vmat)
+  semat / cmat
+}

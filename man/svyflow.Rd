@@ -5,37 +5,22 @@
 \alias{svyflow.survey.design2}
 \alias{svyflow.svyrep.design}
 \alias{svyflow.surflow.design}
-\title{Gross flow estimation between (exogenous) categories}
+\title{Gross flow estimation between categories}
 \usage{
-\method{svyflow}{survey.design2}(x, design, flow.type, rounds, max.iter, extra, na.rm, ...)
+\method{svyflow}{survey.design2}(x, design, rounds, model, ...)
 
-\method{svyflow}{svyrep.design}(x, design, flow.type, rounds, max.iter, extra, na.rm, ...)
+\method{svyflow}{svyrep.design}(x, design, rounds, model, ...)
 
-\method{svyflow}{surflow.design}(
-  x,
-  design,
-  flow.type = NULL,
-  rounds = c(0, 1),
-  max.iter = 10,
-  extra = FALSE,
-  na.rm = FALSE,
-  ...
-)
+\method{svyflow}{surflow.design}(x, design, rounds = c(0, 1), model = c("A", "B", "C", "D"), ...)
 }
 \arguments{
-\item{x}{A formula indcating a \emph{factor} variable.}
+\item{x}{a formula indicating a \emph{factor} variable.}
 
 \item{design}{surflow.design object}
 
-\item{flow.type}{type of flow to estimate: "gross" for counts and "net" for probabilities. Defaults to \code{flow.type = "gross"}.}
-
 \item{rounds}{a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.}
 
-\item{max.iter}{number of iterations. Defaults to \code{max.iter = 10}.}
-
-\item{extra}{Should initial and transition probabilities be stored? Defaults to \code{extra = FALSE}.}
-
-\item{na.rm}{Should missing variables be dropped? Defaults to \code{na.rm = FALSE}. See details for further information.}
+\item{model}{model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.}
 
 \item{...}{future expansion.}
 }
@@ -69,18 +54,13 @@ data( "artificial" )
 flowdes <-
   sfydesign( ids = ~0 ,
                  probs = ~ prob ,
-                 data = list( dfa0 , dfa1 ) ,
+                 data = list( df0 , df1 ) ,
                  nest = TRUE )
 
-# gross flows
-gross.flows <- svyflow( ~v0 , design = flowdes , flow.type = "gross" )
-coef( gross.flows )
-SE( gross.flows )
-
-# net flows
-net.flows <- svyflow( ~v0 , design = flowdes , flow.type = "net" )
-coef( net.flows )
-SE( net.flows )
+# flow estimates
+estflows <- svyflow( ~y , design = flowdes )
+coef( estflows$muij )
+SE( estflows$muij )
 
 }
 \references{

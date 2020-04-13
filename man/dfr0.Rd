@@ -6,7 +6,9 @@
 \alias{dfr1}
 \alias{real}
 \title{Real Datasets}
-\format{Two objects of class \code{data.frame}: \code{dfr0, dfr0}}
+\format{
+Two objects of class \code{data.frame}: \code{dfr0, dfr0}
+}
 \usage{
 data("real")
 }

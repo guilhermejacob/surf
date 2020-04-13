@@ -1,143 +1,172 @@
 context("svyflow estimates with nonresponse")
 
-# set random seed
-set.seed(123)
+# random number generator seed
+set.seed( 123 )
 
-# create pseudo-population
-N = 1e5
-n = round(N *.05)
-eta_pop <- c(.9,.05,.05)
-pij_pop <- matrix( c(0.8, 0.15, 0.05, 0.3, 0.6, 0.1, 0.1, 0.1, 0.8) , ncol = 3 , nrow = 3 , byrow = T )
-nipij_pop <- sweep( pij_pop , 1 , eta_pop , "*" )
-muij_pop <- nipij_pop * N
-pop <- as.numeric( muij_pop )
-pop <- data.frame( k_ij = do.call( c , sapply( seq_along( pop ), function(z) rep( z , pop[z] ) ) ) )
-pop_frame <- expand.grid( data.frame( v0 = seq_len( nrow(nipij_pop) ) , v1 = seq_len( nrow(nipij_pop) ) ) )
-pop_frame <- cbind( k_ij = seq_len( nrow( pop_frame ) ) , pop_frame )
-pop_frame <- merge( pop , pop_frame )[ , -1 ] ; rm( pop )
+# population size
+N = as.integer( 10^5 )
 
-# create covariates
-pop_frame$v2 <- ifelse( pop_frame$v0 == 1 , rbinom( nrow( pop_frame ) , 1 , .7 ) , rbinom( nrow( pop_frame ) , 1 , .3 ) ) + 1
-pop_frame$v3 <- ifelse( pop_frame$v0 == 1 , rbinom( nrow( pop_frame ) , 1 , .7 ) , rbinom( nrow( pop_frame ) , 1 , .3 ) ) + 1
-pop_frame <- pop_frame[ order( pop_frame$v1 ) , ]
-pop_frame <- data.frame( apply(pop_frame[,] , 2 , factor) , stringsAsFactors = TRUE )
+# sample size
+n = as.integer(10^4)
 
-# adds non-response
-pop_frame[ as.logical( rbinom(N,1,.2) ) , 1 ] <- NA
-pop_frame[ !is.na( pop_frame[,1] ) & as.logical( rbinom(N,1,.1) ) , 2 ] <- NA
-pop_frame[ is.na( pop_frame[,2] ) & as.logical( rbinom(N,1,.7) ) , 1 ] <- NA
+# superopopulation model parameters
+eta_pop <- c( .9 , .05, .05 )
+pij_pop <- matrix( c(.80, .15, .05, .30, .60, .10, .10, .10, .80 ) , ncol = 3 , nrow = 3 , byrow = T )
 
-# extract sample
-smp_frame <- pop_frame[ as.logical( sampling::srswor( n , N ) ) , ]
-rm( pop_frame )
+# non-response parameters
+psi_pop <- .8
+rhoRR_pop <- .9
+rhoMM_pop <- .7
 
-# splits data
-df0 <- smp_frame[ , c(1,3) ]
-colnames(df0) <- c("v0","v1")
-df0$prob <- n/N
-df1 <- smp_frame[ , c(2,4) ]
-colnames(df1) <- c("v0","v1")
+# population gross flows
+muij_pop <- N * sweep( pij_pop , 1 , eta_pop , "*" )
 
-# load libraries
-library( surf )
-library( testthat )
+# classification matrix
+class_table <- expand.grid( data.frame( v0 = seq_len( nrow(pij_pop) ) , v1 = seq_len( nrow(pij_pop) ) ) )
+class_table <- class_table[ order( class_table$v0 ) , ]
+class_table[ ,"k_ij" ] <- as.character( seq_len( nrow( class_table ) ) )
 
-# build designs
-flowdes_srs <-
-  sfydesign( ids = ~0 ,
-             fpc = ~ 1/prob ,
-             data = list( df0 , df1 ) ,
-             nest = TRUE )
+##### generate population from super-population model
+
+# extract N-sized population
+pop_fullresponse <- t( rmultinom( N , size = 1 , prob = as.numeric( t( sweep( pij_pop , 1 , eta_pop , "*" ) ) ) ) )
+
+# apply transitions
+pop_fullresponse <- apply( pop_fullresponse , 1 , function( z ) seq_len( ncol( pop_fullresponse ) )[ as.logical( z ) ] )
+pop_fullresponse <- data.frame( "id" = seq_len( N ) , "k_ij" = pop_fullresponse , row.names = NULL , stringsAsFactors = FALSE )
+pop_fullresponse <- merge( pop_fullresponse , class_table , by = c( "k_ij" ) , all.x = TRUE , all.y = FALSE , sort = TRUE )
+pop_fullresponse <- pop_fullresponse[ order( pop_fullresponse$id ) , ]
+
+# remove row names
+rownames( pop_fullresponse ) <- NULL
+
+# to factors
+pop_fullresponse[, c( "v0" , "v1" ) ] <- lapply( pop_fullresponse[, c( "v0" , "v1" ) ] , factor , levels = c( 1:3 ) , labels = 1:3 )
+
+##### apply non-response
+
+# copy full resopnse population
+pop_nonrespose <- pop_fullresponse
+
+# adds non-response in time t-1
+pop_nonrespose[ as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - psi_pop ) ) , "v0" ] <- NA
+
+# adds non-response in time t for respondents in time t-1
+pop_nonrespose[ !is.na( pop_nonrespose[,"v0"] ) & as.logical( rbinom( nrow( pop_nonrespose ) , 1 , 1 - rhoRR_pop ) ) , "v1" ] <- NA
+
+# adds non-response in time t for non-respondents in time t-1
+pop_nonrespose[  is.na( pop_nonrespose[,"v0"] ) & as.logical( rbinom( nrow( pop_nonrespose ) , 1, rhoMM_pop ) ) , "v1" ] <- NA
+
+### extract sample from population
+
+# extract SRS of size n
+smp_df <- pop_nonrespose[ sample( N , n ) , c( "v0" , "v1" ) ]
+
+# create sampling info
+smp_df$prob <- n / N # selection probabilities
+
+# cria objeto de desenho amostral
+df0 <- smp_df[ , -2 , drop = FALSE ]
+df1 <- smp_df[ , 2 , drop = FALSE ]
+colnames( df0 )[1] <- "y"
+colnames( df1 )[1] <- "y"
+
+# build survey design object
+flowdes_srs <- sfydesign( ids = ~ 1 ,
+                     probs = ~ prob ,
+                     data = list( df0 , df1 ) ,
+                     nest = TRUE )
 
 # create replicate designs
 flowdes_srs_rep <- as.surfrdesign( flowdes_srs , type = "bootstrap" , replicate = 50 )
 
+# remove objects
+rm( pop_fullresponse , pop_nonrespose , smp_df , df0 , df1 , class_table ) ; gc()
+
 # estimate flows
-gflow_srs_lin <- svyflow( ~v0 , flowdes_srs , na.rm = TRUE )
-nflow_srs_lin <- svyflow( ~v0 , flowdes_srs , flow.type = "net" , na.rm = TRUE )
-gflow_srs_rep <- svyflow( ~v0 , flowdes_srs_rep , na.rm = TRUE )
-nflow_srs_rep <- svyflow( ~v0 , flowdes_srs_rep , flow.type = "net" , na.rm = TRUE )
-gflow_srs_lin_na <- svyflow( ~v0 , flowdes_srs )
-nflow_srs_lin_na <- svyflow( ~v0 , flowdes_srs , flow.type = "net" )
-gflow_srs_rep_na <- svyflow( ~v0 , flowdes_srs_rep )
-nflow_srs_rep_na <- svyflow( ~v0 , flowdes_srs_rep , flow.type = "net" )
+flow_srs_lin <- svyflow( ~y , flowdes_srs )
+flow_srs_rep <- svyflow( ~y , flowdes_srs_rep )
 
 # test extraction of associated measures
 test_that( "extraction of estimates" , {
 
   # point estimates
-  expect_identical( coef( gflow_srs_lin ) , surf:::coef.flowstat( gflow_srs_lin ) )
-  expect_identical( coef( gflow_srs_rep ) , surf:::coef.flowstat( gflow_srs_rep ) )
-  expect_identical( coef( nflow_srs_lin ) , surf:::coef.flowstat( nflow_srs_lin ) )
-  expect_identical( coef( nflow_srs_rep ) , surf:::coef.flowstat( nflow_srs_rep ) )
+  expect_identical( coef( flow_srs_lin$psi ) , surf:::coef.svymstat( flow_srs_lin$psi ) )
+  expect_identical( coef( flow_srs_lin$rhoRR ) , surf:::coef.svymstat( flow_srs_lin$rhoRR ) )
+  expect_identical( coef( flow_srs_lin$rhoMM ) , surf:::coef.svymstat( flow_srs_lin$rhoMM ) )
+  expect_identical( coef( flow_srs_lin$eta ) , surf:::coef.svymstat( flow_srs_lin$eta ) )
+  expect_identical( coef( flow_srs_lin$muij ) , surf:::coef.svymstat( flow_srs_lin$muij ) )
+  expect_identical( coef( flow_srs_lin$pij ) , surf:::coef.svymstat( flow_srs_lin$pij ) )
+  expect_identical( coef( flow_srs_rep$psi ) , surf:::coef.svymstat( flow_srs_rep$psi ) )
+  expect_identical( coef( flow_srs_rep$rhoRR ) , surf:::coef.svymstat( flow_srs_rep$rhoRR ) )
+  expect_identical( coef( flow_srs_rep$rhoMM ) , surf:::coef.svymstat( flow_srs_rep$rhoMM ) )
+  expect_identical( coef( flow_srs_rep$eta ) , surf:::coef.svymstat( flow_srs_rep$eta ) )
+  expect_identical( coef( flow_srs_rep$muij ) , surf:::coef.svymstat( flow_srs_rep$muij ) )
+  expect_identical( coef( flow_srs_rep$pij ) , surf:::coef.svymstat( flow_srs_rep$pij ) )
 
   # variances
-  expect_identical( vcov( gflow_srs_lin ) , surf:::vcov.flowstat( gflow_srs_lin ) )
-  expect_identical( vcov( gflow_srs_rep ) , surf:::vcov.flowstat( gflow_srs_rep ) )
-  expect_identical( vcov( nflow_srs_lin ) , surf:::vcov.flowstat( nflow_srs_lin ) )
-  expect_identical( vcov( nflow_srs_rep ) , surf:::vcov.flowstat( nflow_srs_rep ) )
+  expect_identical( vcov( flow_srs_lin$psi ) , survey:::vcov.svystat( flow_srs_lin$psi ) )
+  expect_identical( vcov( flow_srs_lin$rhoRR ) , survey:::vcov.svystat( flow_srs_lin$rhoRR ) )
+  expect_identical( vcov( flow_srs_lin$rhoMM ) , survey:::vcov.svystat( flow_srs_lin$rhoMM ) )
+  expect_identical( vcov( flow_srs_lin$eta ) , survey:::vcov.svystat( flow_srs_lin$eta ) )
+  expect_identical( vcov( flow_srs_lin$muij ) , surf:::vcov.svymstat( flow_srs_lin$muij ) )
+  expect_identical( vcov( flow_srs_lin$pij ) , surf:::vcov.svymstat( flow_srs_lin$pij ) )
+  expect_identical( vcov( flow_srs_rep$psi ) , survey:::vcov.svystat( flow_srs_rep$psi ) )
+  expect_identical( vcov( flow_srs_rep$rhoRR ) , survey:::vcov.svystat( flow_srs_rep$rhoRR ) )
+  expect_identical( vcov( flow_srs_rep$rhoMM ) , survey:::vcov.svystat( flow_srs_rep$rhoMM ) )
+  expect_identical( vcov( flow_srs_rep$eta ) , survey:::vcov.svystat( flow_srs_rep$eta ) )
+  expect_identical( vcov( flow_srs_rep$muij ) , surf:::vcov.svymstat( flow_srs_rep$muij ) )
+  expect_identical( vcov( flow_srs_rep$pij ) , surf:::vcov.svymstat( flow_srs_rep$pij ) )
 
   # standard errors
-  expect_identical( SE( gflow_srs_lin ) , surf:::SE.flowstat( gflow_srs_lin ) )
-  expect_identical( SE( gflow_srs_rep ) , surf:::SE.flowstat( gflow_srs_rep ) )
-  expect_identical( SE( nflow_srs_lin ) , surf:::SE.flowstat( nflow_srs_lin ) )
-  expect_identical( SE( nflow_srs_rep ) , surf:::SE.flowstat( nflow_srs_rep ) )
-
-  # coefficients of variation
-  expect_identical( cv( gflow_srs_lin ) , surf:::cv.flowstat( gflow_srs_lin ) )
-  expect_identical( cv( gflow_srs_rep ) , surf:::cv.flowstat( gflow_srs_rep ) )
-  expect_identical( cv( nflow_srs_lin ) , surf:::cv.flowstat( nflow_srs_lin ) )
-  expect_identical( cv( nflow_srs_rep ) , surf:::cv.flowstat( nflow_srs_rep ) )
+  expect_identical( SE( flow_srs_lin$psi ) , survey:::SE.svystat( flow_srs_lin$psi ) )
+  expect_identical( SE( flow_srs_lin$rhoRR ) , survey:::SE.svystat( flow_srs_lin$rhoRR ) )
+  expect_identical( SE( flow_srs_lin$rhoMM ) , survey:::SE.svystat( flow_srs_lin$rhoMM ) )
+  expect_identical( SE( flow_srs_lin$eta ) , survey:::SE.svystat( flow_srs_lin$eta ) )
+  expect_identical( SE( flow_srs_lin$muij ) , surf:::SE.svymstat( flow_srs_lin$muij ) )
+  expect_identical( SE( flow_srs_lin$pij ) , surf:::SE.svymstat( flow_srs_lin$pij ) )
+  expect_identical( SE( flow_srs_rep$psi ) , survey:::SE.svystat( flow_srs_rep$psi ) )
+  expect_identical( SE( flow_srs_rep$rhoRR ) , survey:::SE.svystat( flow_srs_rep$rhoRR ) )
+  expect_identical( SE( flow_srs_rep$rhoMM ) , survey:::SE.svystat( flow_srs_rep$rhoMM ) )
+  expect_identical( SE( flow_srs_rep$eta ) , survey:::SE.svystat( flow_srs_rep$eta ) )
+  expect_identical( SE( flow_srs_rep$muij ) , surf:::SE.svymstat( flow_srs_rep$muij ) )
+  expect_identical( SE( flow_srs_rep$pij ) , surf:::SE.svymstat( flow_srs_rep$pij ) )
 
 } )
 
 # test against bias
 test_that("compare point estimates vs population values",{
-  expect_equivalent( coef( gflow_srs_lin ) , muij_pop , tolerance = .05 )
-  expect_equivalent( coef( gflow_srs_rep ) , muij_pop , tolerance = .05 )
-  expect_equivalent( coef( nflow_srs_lin ) , nipij_pop , tolerance = .05 )
-  expect_equivalent( coef( nflow_srs_rep ) , nipij_pop , tolerance = .05 )
+
+  # linearized design
+  expect_equivalent( coef( flow_srs_lin$psi ) , psi_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_lin$rhoRR ) , rhoRR_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_lin$rhoMM ) , rhoMM_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_lin$eta ) , eta_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_lin$muij ) , muij_pop , tolerance = .05 )
+
+  # replicate design
+  expect_equivalent( coef( flow_srs_rep$psi ) , psi_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_rep$rhoRR ) , rhoRR_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_rep$rhoMM ) , rhoMM_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_rep$eta ) , eta_pop , tolerance = .05 )
+  expect_equivalent( coef( flow_srs_rep$muij ) , muij_pop , tolerance = .05 )
+
 } )
 
 # linearized vs replicate
 test_that("compare linearized vs replicate: point estimates",{
-  expect_identical( coef( gflow_srs_lin ) , coef( gflow_srs_rep ) )
-  expect_identical( coef( nflow_srs_lin ) , coef( nflow_srs_rep ) )
-} )
-test_that("compare linearized vs replicate: standard errors",{
-  expect_equal( SE( gflow_srs_lin ) , SE( gflow_srs_rep ) , tolerance = .4 )
-  expect_equal( SE( nflow_srs_lin ) , SE( nflow_srs_rep ) , tolerance = .4 )
-} )
-test_that("compare linearized vs replicate: coefficients of variation",{
-  expect_equal( cv( gflow_srs_lin ) , cv( gflow_srs_rep ) , tolerance = .4 )
-  expect_equal( cv( nflow_srs_lin ) , cv( nflow_srs_rep ) , tolerance = .4 )
+  expect_identical( coef( flow_srs_lin$psi ) , coef( flow_srs_rep$psi ) )
+  expect_identical( coef( flow_srs_lin$rhoRR ) , coef( flow_srs_rep$rhoRR ) )
+  expect_identical( coef( flow_srs_lin$rhoMM ) , coef( flow_srs_rep$rhoMM ) )
+  expect_identical( coef( flow_srs_lin$eta ) , coef( flow_srs_rep$eta ) )
+  expect_identical( coef( flow_srs_lin$muij ) , coef( flow_srs_rep$muij ) )
 } )
 
-# # check for consistency across versions
-# test_that( "version-consistency tests" , {
-#
-#   # point estimates
-#   verify_output( "output/gflow_srs_lin_coef.txt" , coef( gflow_srs_lin ) )
-#   verify_output( "output/gflow_srs_rep_coef.txt" , coef( gflow_srs_rep ) )
-#   verify_output( "output/nflow_srs_lin_coef.txt" , coef( nflow_srs_lin ) )
-#   verify_output( "output/nflow_srs_rep_coef.txt" , coef( nflow_srs_rep ) )
-#
-#   # variances
-#   verify_output( "output/gflow_srs_lin_vcov.txt" , vcov( gflow_srs_lin ) )
-#   # verify_output( "output/gflow_srs_rep_vcov.txt" , vcov( gflow_srs_rep ) )
-#   verify_output( "output/nflow_srs_lin_vcov.txt" , vcov( nflow_srs_lin ) )
-#   # verify_output( "output/nflow_srs_rep_vcov.txt" , vcov( nflow_srs_rep ) )
-#
-#   # standard errors
-#   verify_output( "output/gflow_srs_lin_SE.txt" , SE( gflow_srs_lin ) )
-#   # verify_output( "output/gflow_srs_rep_SE.txt" , SE( gflow_srs_rep ) )
-#   verify_output( "output/nflow_srs_lin_SE.txt" , SE( nflow_srs_lin ) )
-#   # verify_output( "output/nflow_srs_rep_SE.txt" , SE( nflow_srs_rep ) )
-#
-#   # coefficients of variation
-#   verify_output( "output/gflow_srs_lin_cv.txt" , cv( gflow_srs_lin ) )
-#   # verify_output( "output/gflow_srs_rep_cv.txt" , cv( gflow_srs_rep ) )
-#   verify_output( "output/nflow_srs_lin_cv.txt" , cv( nflow_srs_lin ) )
-#   # verify_output( "output/nflow_srs_rep_cv.txt" , cv( nflow_srs_rep ) )
-#
-# } )
+test_that("compare linearized vs replicate: standard errors",{
+  expect_equivalent( SE( flow_srs_lin$psi ) , SE( flow_srs_rep$psi ) , tolerance = .05 )
+  expect_equivalent( SE( flow_srs_lin$rhoRR ) , SE( flow_srs_rep$rhoRR ) , tolerance = .05 )
+  expect_equivalent( SE( flow_srs_lin$rhoMM ) , SE( flow_srs_rep$rhoMM ) , tolerance = .05 )
+  expect_equivalent( SE( flow_srs_lin$eta ) , SE( flow_srs_rep$eta ) , tolerance = .05 )
+  expect_equivalent( SE( flow_srs_lin$muij ) , SE( flow_srs_rep$muij ) , tolerance = .30 )
+} )
+

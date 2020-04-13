@@ -19,10 +19,9 @@
 #' @title Artificial datasets
 #'
 #' @description Artificial paired datasets, obtained using a SRSWOR from a pseudo-population of 100 000 individuals.
-#'
 #' @docType data
 #'
-#' @aliases dfa0 dfa1 artificial
+#' @aliases df0 df1 artificial
 #'
 #' @usage data("artificial")
 #'
@@ -43,4 +42,4 @@
 #' @seealso \code{\link{dfr0}} for real data from a Brazilian survey.
 #'
 #' @keywords artificial
-"dfa0"
+"df0"

@@ -79,57 +79,6 @@ print.surflow.design <-function(x, varnames=TRUE,design.summaries=FALSE,...){
   invisible(x)
 }
 
-#' @exportS3Method print flowstat
-print.flowstat <- function( x , var.type = c("se","var","cv") , ... ) {
-
-  # variance type
-  var.type <- match.arg( var.type )
-
-  # model type
-  model.type = "A"
-
-  # collect coefficients
-  cmat <- round( x , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
-
-  # collect standard-errors, variance, and cv
-  smat <- round( SE( x ) , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
-  vmat <- round( vcov( x ) , digits = ifelse( attr( x , "statistic" ) == "gross" , 0 , 4 ) )
-  cvmat <- round( SE( x ) / cmat , digits = 4 )
-
-  # print flow estimates header
-  cat(paste0("\n", attr( x , "statistic" ) , " flow estimates\n\n" ) )
-  # cat(paste0("\n", attr( x , "statistic" ) , " flow estimates under Model: ", model.type , "\n\n" ) )
-
-  # print estimates
-  cat("estimates:\n")
-  stats::printCoefmat( cmat , ... )
-
-  # print standard-errors
-  cat(paste0("\n",
-             switch( var.type ,
-                     se = "standard-errors" ,
-                     var = "variances" ,
-                     cv = "coefficients of variation" )
-             , ":\n"))
-  switch( var.type ,
-          se = stats::printCoefmat( smat , ... ) ,
-          var = stats::printCoefmat( vmat , ... ) ,
-          cv = stats::printCoefmat( cvmat , ... ) )
-
-  if ( !is.null( attr( x , "psi" ) ) ) {
-
-    # print model estimates header
-    cat(paste0("\nNon-response correction: Model " , model.type , "\n" ) )
-
-    # model parameters
-    print( attr( x , "psi" ) )
-    print( attr( x , "rhoRR" ) )
-    print( attr( x , "rhoMM" ) )
-
-  }
-
-}
-
 #' @exportS3Method summary surflow.design
 summary.surflow.design <-function(object,varnames=TRUE,...){
 
@@ -209,4 +158,83 @@ summary.surflow.design <-function(object,varnames=TRUE,...){
     print( Reduce( intersect , sapply( object$variables , colnames ) ) )
   }
   invisible(object)
+}
+
+#' @exportS3Method print svymstat
+print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
+
+  # variance type
+  var.type <- match.arg( var.type , several.ok = FALSE )
+
+  # collect coefficients
+  cmat <- x
+  attr( cmat , "var" ) <- NULL
+  attr( cmat , "statistic" ) <- NULL
+  attr( cmat , "class" ) <- NULL
+
+
+  # collect standard-errors, variance, and cv
+  vmat <- attr( x , "var" )
+  semat <- sqrt( vmat )
+  cvmat <- semat / cmat
+
+  # format output
+  cmat <- format( cmat[,] ,
+                  digits = ifelse( attr( x , "statistic" ) == "muij" , 0 , 4 ) ,
+                  nsmall = ifelse( attr( x , "statistic" ) == "muij" , 0 , 4 ) ,
+                  scientific = FALSE ,
+                  trim = TRUE ,
+                  justify = "centre" , drop0trailing = TRUE )
+  semat <- format( semat[,] ,
+                   digits = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
+                   nsmall = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
+                   scientific = FALSE ,
+                   trim = TRUE ,
+                   justify = "centre" , drop0trailing = TRUE )
+  cvmat <- format( cvmat[,] ,
+                   digits = 6 ,
+                   nsmall = 6 ,
+                   scientific = FALSE ,
+                   trim = TRUE ,
+                   justify = "centre" , drop0trailing = TRUE )
+
+  # get header
+  if ( attr( x , "statistic" ) == "muij" ) opheader <- "gross flows" else if ( attr( x , "statistic" ) == "pij" ) opheader <- "transition probabilities"
+
+  # # print flow estimates header
+  # cat(paste0(opheader , "\nestimates\n" ) )
+
+  # print estimates
+  print( cmat , quote = FALSE )
+
+  # print standard-errors
+  cat(paste0("\n",
+             switch( var.type ,
+                     se = "SE" ,
+                     var = "variances" ,
+                     cv = "coefficients of variation" )
+             , "\n"))
+
+  oomat <- switch( var.type ,
+                   se = semat ,
+                   var = var ,
+                   cv = cvmat )
+  print( oomat , quote = FALSE )
+
+}
+
+#' @exportS3Method print flowstat
+print.flowstat <- function( x , var.type = c("se","var","cv") , ... ) {
+
+  cat( paste0( "Model " , x$model , "\n" ) )
+  cat( paste0( "\nInitial Response Probability" , "\n" ) )
+  print( x[["psi"]] )
+  cat( paste0( "\nRespondent to Respondent Transition Probability" , "\n" ) )
+  print( x[["rhoRR"]] )
+  cat( paste0( "\nNon-Respondent to Non-Respondent Transition Probability" , "\n" ) )
+  print( x[["rhoMM"]] )
+  cat( paste0( "\nGross Flows" , "\n" ) )
+  print.svymstat( x[["muij"]] )
+  invisible(x)
+
 }
