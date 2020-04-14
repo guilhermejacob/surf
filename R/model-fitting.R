@@ -118,7 +118,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       etav <-
         ( rowSums( bigNij ) + bigRi +
             rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , bigCj , "*" ) ) +
-            bigM * ( psicni / sum( psicni ) ) ) / N
+            bigM * ( psicni / sum( psicni ) ) ) / ( sum( bigNij ) + sum( bigRi ) + sum( bigCj ) + bigM )
 
       # calculate pij v+1
       pijv <-
@@ -493,155 +493,12 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     # return list of results
     return( resvar )
 
-    # calculate auxiliary stats
-    nipij <- sweep( pij , 1 , eta , "*" )
-    psicni <- ( 1 - psi ) * eta
-    psicnipij <- sweep( pij , 1 , psicni , "*" )
-
-    ### rhoRR
-
-    # special variables
-    a3 <- sum( bigRi ) / ( sum( bigNij ) + sum( bigRi ) )^2
-    a4 <- sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
-
-    # linearized variable e_psi
-    e_rhoRR <- a3 + a4 * ( 1 - zz[,2] )
-
-    # calculate variance
-    rhoRR_var <- survey::svyrecvar( ww * e_rhoRR , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
-    ### rhoMM
-
-    # special variables
-    a5 <- - bigM / ( sum( bigCj ) + bigM )^2
-    a6 <- - sum( bigCj ) / ( sum( bigCj ) + bigM )^2
-
-    # linearized variable e_psi
-    e_rhoMM <- a5 * ( 1 - zz[,1] ) + a6 * ( 1 - zz[,1] ) * ( 1 - zz[,2] )
-
-    # calculate variance
-    rhoMM_var <- survey::svyrecvar( ww * e_rhoMM , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
-    ### psi
-
-    # Calculate scores for estimating the variance of psi parameters
-    u_psi <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
-    for ( i in seq_len( nrow( bigNij ) ) ) {
-      u_psi[,i] <-
-        rowSums( y1y2[,i,] ) / psi[i] +
-        yy[,i,1] * ( 1 - zz[,2] ) / eta[i] -
-        rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , nipij[i,] / colSums( psicnipij ) , "*" ) ) -
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # wrong index in the text
-    }
-
-    # Calculate jacobian for estimating the variance of psi parameters
-    # not sure about 5.77
-    jpsi <- vector( "numeric" , length = nrow( bigNij ) )
-    for ( i in seq_len( nrow( bigNij ) ) ) {
-      jpsi[i] <-
-        - sum( ww * rowSums( y1y2[,i,] ) / psi[i]^2 ) -
-        # sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( psicnipij )^2 ) , "*" ) ) ) - # 1st attempt
-        sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) ) , "*" ) ) ) - # 2nd attempt
-        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij / sum( psicnipij )^2 )[i] )
-      # sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) )
-    }
-
-    # divide u_psi by the jacobian
-    u_psi <- sweep( u_psi , 2 , jpsi , "/" )
-
-    # calculate variance of psi
-    psi_var <- survey::svyrecvar( sweep( u_psi , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    psi_var <- diag( psi_var )
-
-    ### eta
-
-    # Calculate scores for estimating the variance of eta parameters
-    u_eta <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
-    for ( i in seq_len( nrow( bigNij ) ) ) {
-      u_eta[,i] <-
-        ( rowSums( y1y2[,i,] ) + yy[,i,1] * ( 1 - zz[,2] ) ) / eta[i] +
-        rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , psicnipij[i,] / colSums( psicnipij ) , "*" ) ) +
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( sweep( pij , 1 , 1 - psi , "*" ) )[i] / sum( psicnipij ) - 1
-    }
-
-    # Calculate jacobian for estimating the variance of eta parameters
-    jeta <- vector( "numeric" , length = nrow( bigNij ) )
-    for ( i in seq_len( nrow( bigNij ) ) ) {
-      jeta[i] <-
-        - sum( ww * yy[,i,1] ) / eta[i]^2 -
-        sum( ww * yy[,i,1] * zz[,2] ) / eta[i]^2 -
-        sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , sweep( pij , 1 , 1 - psi , "*" )[i,]^2 / colSums( psicnipij )^2 , "*" ) ) ) -
-        sum( ww * ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( ( 1 - psi ) * eta )[i]^2 / sum( psicnipij )^2 )
-    }
-
-    # divide u_eta by the jacobian
-    u_eta <- sweep( u_eta , 2 , jeta , "/" )
-
-    # calculate variance of eta
-    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    eta_var <- diag( eta_var )
-
-    ### pij
-
-    # Calculate scores for estimating the variance of pij parameters
-    u_pij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
-    for ( i in seq_len( nrow( bigNij ) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
-      u_pij[,i,j] <- ( y1y2[,i,j] / pij[i,j] ) +
-        ( yy[,i,1] * ( 1 - zz[,2] ) ) +
-        ( yy[,j,2] * ( 1 - zz[,1] ) ) * ( eta[i] / colSums( nipij )[j] ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i]
-    }
-
-    # Calculate jacobian for estimating the variance of pij parameters
-    jpij <- array( 0 , dim = c( nrow(bigNij) , ncol(bigNij) ) )
-    for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
-      jpij[i,j] <-
-        - sum( ww * y1y2[,i,j] ) / pij[i,j]^2 -
-        sum( ww * yy[,i,1] * ( 1 - zz[,2] ) ) / colSums( pij )[j]^2 -
-        sum( ww * yy[,j,2] * ( 1 - zz[,1] ) * ( 1 - psi[i] )^2 * eta[i]^2 / sum( psicnipij )^2 )
-    }
-
-    # divide u_pij by the jacobian
-    u_pij <- sweep( u_pij , 2:3 , jpij , "/" )
-
-    # calculate variance of u_pij sum
-    lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
-    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
-    ### muij
-
-    # calculate variance
-    u_muij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
-    for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
-      u_muij[,i,j] <- nipij[i,j] + N * ( pij[i,j] * u_eta[,i] + eta[i] * u_pij[,i,j] )
-    }
-
-    # calculate variance of muij
-    lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
-    muij_var <- diag( survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    muij_var <- matrix( muij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
-    ### combine results
-
-    # return final estimates
-    resvar <-
-      list(
-        "psi" = psi_var ,
-        "rhoRR" = rhoRR_var ,
-        "rhoMM" = rhoMM_var ,
-        "eta" = eta_var ,
-        "pij" = pij_var ,
-        "muij" = muij_var )
-
-    # return list of results
-    return( resvar )
-
   } , B ={
     # calculate auxiliary stats
     nipij <- sweep( pij , 1 , eta , "*" )
     psicni <- ( 1 - psi ) * eta
     psicnipij <- sweep( pij , 1 , psicni , "*" )
+    psicpij <- sweep( pij , 1 , 1 - psi , "*" )
 
     ### rhoRR
 
@@ -674,7 +531,7 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     for ( i in seq_len( nrow( bigNij ) ) ) {
       u_psi[,i] <-
         rowSums( y1y2[,i,] ) / psi[i] +
-        yy[,i,1] * ( 1 - zz[,2] ) / eta[i] -
+        yy[,i,1] * ( 1 - zz[,2] ) / psi[i] -
         rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , nipij[i,] / colSums( psicnipij ) , "*" ) ) -
         ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # wrong index in the text
     }
@@ -705,18 +562,18 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     for ( i in seq_len( nrow( bigNij ) ) ) {
       u_eta[,i] <-
         ( rowSums( y1y2[,i,] ) + yy[,i,1] * ( 1 - zz[,2] ) ) / eta[i] +
-        rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , psicnipij[i,] / colSums( psicnipij ) , "*" ) ) +
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( sweep( pij , 1 , 1 - psi , "*" ) )[i] / sum( psicnipij ) - 1
+        rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , psicpij[i,] / colSums( psicnipij ) , "*" ) ) +
+        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( psicpij )[i] / sum( psicnipij ) - 1
     }
 
     # Calculate jacobian for estimating the variance of eta parameters
     jeta <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       jeta[i] <-
-        - sum( ww * yy[,i,1] ) / eta[i]^2 -
-        sum( ww * yy[,i,1] * zz[,2] ) / eta[i]^2 -
-        sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , sweep( pij , 1 , 1 - psi , "*" )[i,]^2 / colSums( psicnipij )^2 , "*" ) ) ) -
-        sum( ww * ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( ( 1 - psi ) * eta )[i]^2 / sum( psicnipij )^2 )
+        - sum( ww * y1y2[,i,] ) / eta[i]^2 -
+        sum( ww * yy[,i,1] * ( 1 - zz[,2] ) ) / eta[i]^2 -
+        sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , psicpij[i,]^2 / colSums( psicnipij )^2 , "*" ) ) ) -
+        sum( ww * ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( psicpij )[i]^2 / sum( psicnipij )^2 )
     }
 
     # divide u_eta by the jacobian
@@ -807,15 +664,14 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     ### rhoRR
 
     # special variables
-    a3 <- bigRi / ( rowSums( bigNij ) + bigRi )^2
-    a4 <- - rowSums( bigNij ) / ( rowSums( bigNij ) + bigRi )^2
+    a3 <- sum( bigRi ) / ( sum( bigNij ) + sum( bigRi ) )^2
+    a4 <- sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
 
     # linearized variable e_psi
-    e_rhoRR <- sapply( seq_along( a3 ) , function( z) a3[z] + a4[z] * ( 1 - zz[,2] ) )
+    e_rhoRR <- a3 + a4 * ( 1 - zz[,2] )
 
     # calculate variance
     rhoRR_var <- survey::svyrecvar( ww * e_rhoRR , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    rhoRR_var <- diag( rhoRR_var )
 
     ### rhoMM
 
@@ -823,8 +679,8 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     u_rhoMM <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       u_rhoMM[,i] <-
-        - rowSums( sweep( yy[,,2] * ( 1 - zz[,2] ) , 2 , nipij[i,] / colSums( rhocnipij ) ) ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[i,] / sum( rhonipij ) )
+        - rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , nipij[i,] / colSums( rhocnipij ) ) ) +
+        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[i,] ) / sum( rhonipij )
     }
 
     # Calculate jacobian for estimating the variance of rhoMM parameters
@@ -886,7 +742,8 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
       jpij[i,j] <-
         - sum( ww * y1y2[,i,j] ) / pij[i,j]^2 -
-        sum( ww * ( 1 - zz[,1] ) * yy[,j,2] * ( rhocni )[i]^2 / colSums( rhocnipij )[j]^2 )
+        sum( ww * yy[,i,1] * ( 1 - zz[,2] ) ) / colSums( pij )[j]^2 -
+        sum( ww * ( 1 - zz[,1] ) * yy[,j,2] ) * ( rhocni )[i]^2 / colSums( rhocnipij )[j]^2
     }
 
     # divide u_pij by the jacobian
@@ -1089,3 +946,4 @@ ipf_variance <- function( xx , ww , res , model , design ) {
   mvar
 
 }
+
