@@ -11,7 +11,14 @@
 
 \method{svyflow}{svyrep.design}(x, design, rounds, model, ...)
 
-\method{svyflow}{surflow.design}(x, design, rounds = c(0, 1), model = c("A", "B", "C", "D"), ...)
+\method{svyflow}{surflow.design}(
+  x,
+  design,
+  rounds = c(0, 1),
+  model = c("A", "B", "C", "D"),
+  tol = 1e-08,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{x}{a formula indicating a \emph{factor} variable.}
