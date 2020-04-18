@@ -533,6 +533,7 @@ ipf_variance <- function( xx , ww , res , model , design ) {
         rowSums( y1y2[,i,] ) / psi[i] +
         yy[,i,1] * ( 1 - zz[,2] ) / psi[i] -
         rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , nipij[i,] / colSums( psicnipij ) , "*" ) ) -
+        # ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # formula in the text
         ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # wrong index in the text
     }
 
@@ -542,9 +543,10 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     for ( i in seq_len( nrow( bigNij ) ) ) {
       jpsi[i] <-
         - sum( ww * rowSums( y1y2[,i,] ) / psi[i]^2 ) -
-        # sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( psicnipij )^2 ) , "*" ) ) ) - # 1st attempt
-        sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) ) , "*" ) ) ) - # 2nd attempt
-        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij / sum( psicnipij )^2 )[i] )
+        # sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) ) , "*" ) ) ) - # 2nd attempt
+        # sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( psicnipij )^2 ) , "*" ) ) ) - # 3rd attempt
+        sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,]^2 / colSums( psicnipij )^2 ) , "*" ) ) ) - # 4th attempt
+        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i]^2 / sum( psicnipij )^2 )
       # sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) )
     }
 
