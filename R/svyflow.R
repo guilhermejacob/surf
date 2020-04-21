@@ -79,11 +79,89 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   # Collect weights
   ww <-  stats::weights( design )
 
-  # model fitting
-  mfit <- ipf( xx , ww , model = model , ... )
+  # if no missing, use simple contingency table
+  if ( !any( is.na( xx[ ww > 0 ,] ) ) ) {
 
-  # variance estimation
-  mvar <- ipf_variance( xx , ww , res = mfit , design = design )
+    bigNij <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
+    bigNij <- as.matrix( bigNij[ -nrow( bigNij ) , -ncol( bigNij ) ] )
+    eta <- rowSums( bigNij ) / sum( bigNij )
+    pij <- bigNij / rowSums( bigNij )
+    muij <- sum( ww ) * sweep( pij , 1 , eta , "*" )
+
+    ### variance
+
+    # yy array - see Rojas et al. (2014, p.294)
+    yy <- array( 0  , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( xx ) ) )
+    for ( r in seq_len( ncol( xx ) ) ) {
+      kk <- stats::model.matrix( ~-1+. , data = xx[,r,drop = FALSE] , contrasts.arg = lapply( xx[,r, drop = FALSE ] , stats::contrasts, contrasts=FALSE ) , na.action = stats::na.pass )
+      yy[ which( !is.na( xx[ , r ] ) ) , , r ] <- kk ; rm( kk )
+    }
+
+    # Create matrix of z variables - see Rojas et al. (2014, p.294)
+    zz <- apply( xx , 2 , function(z) as.numeric( !is.na(z) ) )
+
+    # Special variables - see Rojas et al. (2014, p.295)
+    vv <- rowSums( yy[,,1] ) * rowSums( yy[,,2] ) + rowSums( yy[,,2] * (1 - zz[,1]) ) + rowSums( yy[,,1] * (1 - zz[,2]) ) + ( 1- zz[,1] ) * ( 1- zz[,2] )
+    y1y2 <- array( 0  , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
+    for ( i in seq_len( nrow( bigNij ) ) ) for ( j in seq_len( ncol( bigNij ) ) ) y1y2[,i,j] <- yy[,i,1] * yy[,j,2]
+
+    # aux stats
+    nipij <- sweep( pij , 1 , eta , "*" )
+
+    ### eta
+
+    # Calculate scores for estimating the variance of eta parameters
+    u_eta <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
+    for ( i in seq_len( nrow( bigNij ) ) ) {
+      u_eta[,i] <-
+        ( sum( bigNij ) * rowSums( y1y2[,i,] ) - rowSums( bigNij )[i] * rowSums( y1y2[,i,] ) * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) ) / sum( bigNij )^2
+    }
+
+    # calculate variance of eta
+    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    eta_var <- diag( eta_var )
+
+    ### pij
+
+    # Calculate scores for estimating the variance of pij parameters
+    u_pij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
+    for ( i in seq_len( nrow( bigNij ) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
+      u_pij[,i,j] <-
+        ( sum( bigNij ) * y1y2[,i,j] - bigNij[i,j] * y1y2[,i,j] ) / sum( bigNij )^2
+    }
+
+    # calculate variance of u_pij sum
+    lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
+    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
+
+    ### muij
+
+    # calculate variance
+    u_muij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
+    for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
+      u_muij[,i,j] <- nipij[i,j] + sum(ww) * ( pij[i,j] * u_eta[,i] + eta[i] * u_pij[,i,j] )
+    }
+
+    # calculate variance of muij
+    lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
+    muij_var <- diag( survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+    muij_var <- matrix( muij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
+
+    ### combine results
+    mfit <- list( "psi" = NA , "rhoRR" = NA , "rhoMM" = NA , "eta" = eta , "pij" = pij , "muij" = bigNij )
+    mfit$model <- "Full Response"
+    mvar <- list( "psi" = NA , "rhoRR" = NA , "rhoMM" = NA , "eta" = eta_var , "pij" = pij_var , "muij" = muij_var )
+
+  } else {
+
+    # model fitting
+    mfit <- ipf( xx , ww , model = model , tol = list(`...`)[["tol"]] , verbose = list(`...`)[["verbose"]] , starting.values = list(`...`)[["starting.values"]] )
+
+    # variance estimation
+    mvar <- ipf_variance( xx , ww , res = mfit , design = design )
+
+  }
 
   # build results list
   res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" ) , function(z) {
@@ -207,10 +285,10 @@ svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
 #' @export
 #' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D") , tol = 1e-8 , verbose = FALSE ) {
+svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D") , tol = 1e-8 , verbose = FALSE , starting.values = list( "psi" = NULL , "rhoRR" = NULL , "rhoMM" = NULL, "eta" = NULL , "pij" = NULL ) ) {
   model <- match.arg( model , several.ok = FALSE )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-  NextMethod( "svyflow" , design = design , rounds = rounds , model = model , tol = tol , verbose = verbose )
+  NextMethod( "svyflow" , design = design , rounds = rounds , model = model , tol = tol , verbose = verbose , starting.values = starting.values )
 }
 
 #' @export
