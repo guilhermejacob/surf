@@ -184,7 +184,8 @@ ipf_variance <- function( xx , ww , res , model , design ) {
         yy[,i,1] * ( 1 - zz[,2] ) / psi[i] -
         rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , nipij[i,] / colSums( psicnipij ) , "*" ) ) -
         # ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # formula in the text
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # wrong index in the text
+        # ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( psicnipij ) # wrong index in the text
+        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * eta[i] / sum( psicnipij ) # my solution
     }
 
     # Calculate jacobian for estimating the variance of psi parameters
@@ -196,8 +197,7 @@ ipf_variance <- function( xx , ww , res , model , design ) {
         # sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) ) , "*" ) ) ) - # 2nd attempt
         # sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,] / colSums( psicnipij )^2 ) , "*" ) ) ) - # 3rd attempt
         sum( ww  * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , ( nipij[i,]^2 / colSums( psicnipij )^2 ) , "*" ) ) ) - # 4th attempt
-        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i]^2 / sum( psicnipij )^2 )
-      # sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * rowSums( nipij )[i] / sum( sweep( nipij , 1 , (1 - psi)^2 , "*" ) ) )
+        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i]^2 / sum( psicnipij )^2 ) # my solution
     }
 
     # divide u_psi by the jacobian
@@ -315,15 +315,25 @@ ipf_variance <- function( xx , ww , res , model , design ) {
 
     ### rhoRR
 
-    # special variables
-    a3 <- sum( bigRi ) / ( sum( bigNij ) + sum( bigRi ) )^2
-    a4 <- sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
+    # Calculate scores for estimating the variance of rhoRR parameters
+    u_rhoRR <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
+    for ( i in seq_len( nrow( bigNij ) ) ) {
+      u_rhoRR[,i] <- yy[,i,1] * rowSums( yy[,,2] ) / rhoRR[i] - yy[,i,1] * ( 1 - zz[,2] ) / ( 1 - rhoRR[i] )
+    }
 
-    # linearized variable e_psi
-    e_rhoRR <- a3 + a4 * ( 1 - zz[,2] )
+    # Calculate jacobian for estimating the variance of rhoRR parameters
+    jrhoRR <- vector( "numeric" , length = nrow( bigNij ) )
+    for ( i in seq_len( nrow( bigNij ) ) ) {
+      jrhoRR[i] <-
+        sum( ww * yy[,i,1] * rowSums( yy[,,2] ) / rhoRR[i]^2 ) + sum( ww * yy[,i,1] * ( 1 - zz[,2] ) / ( 1 - rhoRR[i] )^2 )
+    }
 
-    # calculate variance
-    rhoRR_var <- survey::svyrecvar( ww * e_rhoRR , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    # divide u_rhoRR by the jacobian
+    u_rhoRR <- sweep( u_rhoRR , 2 , jrhoRR , "/" )
+
+    # calculate variance of rhoRR
+    rhoRR_var <- survey::svyrecvar( sweep( u_rhoRR , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    rhoRR_var <- diag( rhoRR_var )
 
     ### rhoMM
 
@@ -331,16 +341,16 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     u_rhoMM <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       u_rhoMM[,i] <-
-        - rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , nipij[i,] / colSums( rhocnipij ) ) ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[i,] ) / sum( rhonipij )
+        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i] / sum( rhoni ) -
+          rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , nipij[i,] / colSums( rhocnipij ) , "*" ) )
     }
 
     # Calculate jacobian for estimating the variance of rhoMM parameters
     jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       jrhoMM[i] <-
-        - sum( ww * ( 1 - zz[,1] ) * sweep( yy[,,2] , 2 , nipij[i,]^2 / colSums( rhocnipij )^2 , "*" ) ) - sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[i,] )^2 ) / sum( rhonipij )^2
-      # + sum( ww * ( 1 - zz[,1] ) * sweep( yy[,,2] , 2 , nipij[i,] / colSums( sweep( nipij , 1 , ( 1 - rhoMM )^2 , "*" ) ) , "*" ) ) - sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[i,] ) ) / sum( sweep( nipij , 1 , rhoMM^2 , "*" ) ) #
+        - sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i]^2 / sum( rhoni )^2 ) +
+        sum( ww * rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , nipij[i,]^2 / colSums( rhocnipij )^2 , "*" ) ) )
     }
 
     # divide u_rhoMM by the jacobian
@@ -443,6 +453,7 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     rhoRRcpij <- sweep( pij , 2 , 1 - rhoRR , "*" )
     rhoMMnipij <- sweep( nipij , 2 , rhoMM , "*" )
     rhoMMpij <- sweep( pij , 2 , rhoMM , "*" )
+    rhoMMcpij <- sweep( 1 - pij , 2 , rhoMM , "*" )
 
     ### psi
 
@@ -462,16 +473,16 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     u_rhoRR <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
       u_rhoRR[,j] <-
-        rowSums( y1y2[,,j] / rhoRR[j] ) -
-        rowSums( sweep( yy[,,1] * ( 1 - zz[,2] ) , 2 , pij[,j] / rowSums( rhoRRcpij ) , "*" ) )
+        yy[,j,2] * rowSums( yy[,,1] ) / rhoRR[j] -
+        rowSums( sweep( ( 1 - zz[,2] ) * yy[,,1] , 2 ,  pij[,j] / rowSums( rhoMMcpij ) , "*" ) )
     }
 
     # Calculate jacobian for estimating the variance of rhoRR parameters
     jrhoRR <- vector( "numeric" , length = nrow( bigNij ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
       jrhoRR[j] <-
-        - sum( ww * rowSums( y1y2[,,j] ) ) / rhoRR[j]^2 -
-        sum( ww * ( 1 - zz[,2] ) * rowSums( sweep( yy[,,1] , 2 , pij[,j]^2 / rowSums( rhoRRcpij )^2 , "*" ) ) )
+        - sum( ww * yy[,j,2] * rowSums( yy[,,1] ) ) / rhoRR[j]^2 +
+        sweep( yy[,,1] * ( 1 - zz[,2] ) , 2 , pij[,j]^2 / rowSums( rhoMMcpij )^2 ,  )
     }
 
     # divide u_rhoRR by the jacobian
@@ -488,15 +499,14 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     for ( j in seq_len( nrow( bigNij ) ) ) {
       u_rhoMM[,j] <-
         - yy[,j,2] * ( 1 - zz[,1] ) / ( 1 - rhoMM[j] ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * colSums( nipij )[j] / sum( rhoMMnipij )
+        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] ) / sum( rhoMMnipij )
     }
 
     # Calculate jacobian for estimating the variance of rhoMM parameters
     jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
       jrhoMM[j] <-
-        sum( ww * yy[,j,2] * ( 1 - zz[,1] ) ) / ( 1 - rhoMM[j] )^2 -
-        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) ) * colSums( nipij )[j]^2 / sum( rhoMMnipij )^2
+        - sum( ww * yy[,j,2] * ( 1 - zz[,1] ) / ( 1 - rhoMM[j] )^2 ) - sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] )^2 / sum( rhoMMnipij )^2 )
     }
 
     # divide u_rhoMM by the jacobian
