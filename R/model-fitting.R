@@ -89,9 +89,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
     # Obtain starting values for estimating superpopulation model flow parameters
     # psii, eta and pij according to Result 4.8 of Rojas (2014, p.49)
     # psii0 <- psiiv <- rep( sum( bigNij ) + sum( bigRi ) , nrow( bigNij ) ) / N
-    psii0 <- psiiv <- if ( is.null( starting.values[["psi"]] ) ) ( rowSums( bigNij ) + sum( bigRi ) ) / N else starting.values[["psi"]]
+    psii0 <- psiiv <- if ( is.null( starting.values[["psi"]] ) ) ( rowSums( bigNij ) + bigRi ) / N else starting.values[["psi"]]
     eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
-    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
+    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 2 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
     maxdiff <- Inf
     v = 0
 
