@@ -17,7 +17,9 @@
   rounds = c(0, 1),
   model = c("A", "B", "C", "D"),
   tol = 1e-08,
-  verbose = FALSE
+  verbose = FALSE,
+  starting.values = list(psi = NULL, rhoRR = NULL, rhoMM = NULL, eta = NULL, pij =
+    NULL)
 )
 }
 \arguments{

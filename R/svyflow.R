@@ -127,7 +127,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
     u_pij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
       u_pij[,i,j] <-
-        ( sum( bigNij ) * y1y2[,i,j] - bigNij[i,j] * y1y2[,i,j] ) / sum( bigNij )^2
+        ( sum( bigNij[i,] ) * y1y2[,i,j] - bigNij[i,j] * rowSums( y1y2[,i, ] ) ) / sum( bigNij[i,] )^2
     }
 
     # calculate variance of u_pij sum
@@ -150,7 +150,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
 
     ### combine results
     mfit <- list( "psi" = NA , "rhoRR" = NA , "rhoMM" = NA , "eta" = eta , "pij" = pij , "muij" = bigNij )
-    mfit$model <- "Full Response"
+    mfit$model <- "(No Missing)"
     mvar <- list( "psi" = NA , "rhoRR" = NA , "rhoMM" = NA , "eta" = eta_var , "pij" = pij_var , "muij" = muij_var )
 
   } else {
@@ -285,7 +285,7 @@ svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
 #' @export
 #' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D") , tol = 1e-8 , verbose = FALSE , starting.values = list( "psi" = NULL , "rhoRR" = NULL , "rhoMM" = NULL, "eta" = NULL , "pij" = NULL ) ) {
+svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D") , tol = 1e-6 , verbose = FALSE , starting.values = list( "psi" = NULL , "rhoRR" = NULL , "rhoMM" = NULL, "eta" = NULL , "pij" = NULL ) ) {
   model <- match.arg( model , several.ok = FALSE )
   if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
   NextMethod( "svyflow" , design = design , rounds = rounds , model = model , tol = tol , verbose = verbose , starting.values = starting.values )
