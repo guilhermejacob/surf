@@ -213,19 +213,20 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     u_eta <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       u_eta[,i] <-
-        ( rowSums( y1y2[,i,] ) + yy[,i,1] * ( 1 - zz[,2] ) ) / eta[i] +
-        rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , psicpij[i,] / colSums( psicnipij ) , "*" ) ) +
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( psicpij )[i] / sum( psicnipij ) - 1
+        yy[,i,1] * rowSums( yy[,,2] ) / eta[i] +
+        yy[,i,1] * ( 1 - zz[,2] ) / eta[i] +
+        rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , psicpij[i,] / colSums( psicnipij ) , "*" ) ) +
+        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( 1 - psi[i] ) / sum( psicni )
     }
 
     # Calculate jacobian for estimating the variance of eta parameters
     jeta <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       jeta[i] <-
-        - sum( ww * y1y2[,i,] ) / eta[i]^2 -
+        - sum( ww * yy[,i,1] * rowSums( yy[,,2] ) ) / eta[i]^2 -
         sum( ww * yy[,i,1] * ( 1 - zz[,2] ) ) / eta[i]^2 -
-        sum( ww * ( 1 - zz[,1] ) * rowSums( sweep( yy[,,2] , 2 , psicpij[i,]^2 / colSums( psicnipij )^2 , "*" ) ) ) -
-        sum( ww * ( 1- zz[,1] ) * ( 1 - zz[,2] ) * rowSums( psicpij )[i]^2 / sum( psicnipij )^2 )
+        sum( ww * rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , psicpij[i,]^2 / colSums( psicnipij )^2 , "*" ) ) ) -
+        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( 1 - psi[i] )^2 / sum( psicni )^2 )
     }
 
     # divide u_eta by the jacobian
@@ -482,7 +483,7 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     for ( j in seq_len( nrow( bigNij ) ) ) {
       jrhoRR[j] <-
         - sum( ww * yy[,j,2] * rowSums( yy[,,1] ) ) / rhoRR[j]^2 +
-        sweep( yy[,,1] * ( 1 - zz[,2] ) , 2 , pij[,j]^2 / rowSums( rhoMMcpij )^2 ,  )
+        sum( ww * sweep( yy[,,1] * ( 1 - zz[,2] ) , 2 , pij[,j]^2 / rowSums( rhoMMcpij )^2 , "*" ) )
     }
 
     # divide u_rhoRR by the jacobian
@@ -506,7 +507,8 @@ ipf_variance <- function( xx , ww , res , model , design ) {
     jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
       jrhoMM[j] <-
-        - sum( ww * yy[,j,2] * ( 1 - zz[,1] ) / ( 1 - rhoMM[j] )^2 ) - sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] )^2 / sum( rhoMMnipij )^2 )
+        - sum( ww * yy[,j,2] * ( 1 - zz[,1] ) ) / ( 1 - rhoMM[j] )^2 -
+        sum( ww * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] )^2 / sum( rhoMMnipij )^2 )
     }
 
     # divide u_rhoMM by the jacobian
