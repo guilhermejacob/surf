@@ -1,5 +1,5 @@
 # function for model fitting
-ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.values = list( "psi" = NULL , "rhoRR" = NULL , "rhoMM" = NULL , "eta" = NULL , "pij" = NULL ) ) {
+ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.values = list( "psi" = NULL , "rhoRR" = NULL , "rhoMM" = NULL , "eta" = NULL , "pij" = NULL ) ,  pij.zero = NULL ) {
 
   # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
   bigNij <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
@@ -9,8 +9,41 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
   bigNij <- as.matrix( bigNij[ -nrow( bigNij ) , -ncol( bigNij ) ] )
   N  <- sum( bigNij ) + sum( bigRi ) + sum( bigCj ) + bigM
 
+  # test if margins are not zero
+  if ( any( rowSums( bigNij ) == 0 , colSums( bigNij ) == 0 ) ) stop( "a line or column total is equal to zero. consider removing the category." )
+
   # ajusts using onde of the models
-  mfit <- switch( model , A = {
+  mfit <- switch( model , MCAR = {
+
+    # MCAR estimation
+    eta <- rowSums( bigNij ) / sum( bigNij )
+    pij <- bigNij / rowSums( bigNij )
+
+    # adjust for structural zeros in transition matrix
+    if ( !is.null( pij.zero ) ) pij[ pij.zero ] <- 0
+
+    # return final estimates
+    res <-
+      list(
+        "model" = model ,
+        "iter" = NA ,
+        "N" = N ,
+        "bigNij" = bigNij ,
+        "bigRi" = bigRi ,
+        "bigCj" = bigCj ,
+        "bigM" = bigM ,
+        "psi" = NA ,
+        "rhoRR" = NA ,
+        "rhoMM" = NA ,
+        "eta" = eta ,
+        "pij" = pij ,
+        "muij" = N * sweep( pij , 1 , eta , "*" ) ,
+        "pij.zero" = pij.zero )
+
+    # return list of results
+    return( res )
+
+  } , A = {
     # Obtain maximum pseudo-likelihood estimates for response model parameters
     # psi, rhoRR, and rhoMM according to Result 4.2 of Rojas (2014, p.38)
     psi <- ( sum( bigNij ) + sum( bigRi ) ) / N
@@ -44,6 +77,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         sweep( bigNij + sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , bigCj , "*" ) , 1 ,
                rowSums( bigNij ) + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , bigCj , "*" ) ) , "/" )
 
+      # adjust for structural zeros in transition matrix
+      if ( !is.null( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
+
       # calculate maximum absolute difference
       maxdiff <- max( abs( c( c( etav - eta0 ) , c( pijv - pij0 ) ) ) )
 
@@ -74,7 +110,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "rhoMM" = rhoMM ,
         "eta" = etav ,
         "pij" = pijv ,
-        "muij" = N * sweep( pijv , 1 , etav , "*" ) )
+        "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "pij.zero" = pij.zero )
 
     # return list of results
     return( res )
@@ -106,6 +143,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       nipij <- sweep( pijv , 1 , etav , "*" )
       psicni <- ( 1 - psiiv ) * etav
       psicnipij <- sweep( pijv , 1 , psicni , "*" )
+      psicpij <- sweep( pijv , 1 , 1 - psiiv , "*" )
 
       # calculate psi
       psiiv <-
@@ -124,6 +162,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       pijv <-
         sweep( bigNij + sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , bigCj , "*" ) , 1 ,
                rowSums( bigNij ) + rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , bigCj , "*" ) ) , "/" )
+
+      # adjust for structural zeros in transition matrix
+      if ( !is.null( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
 
       # calculate changes
       these_diffs <- c( c( psiiv - psii0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
@@ -159,7 +200,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "rhoMM" = rhoMM ,
         "eta" = etav ,
         "pij" = pijv ,
-        "muij" = N * sweep( pijv , 1 , etav , "*" ) )
+        "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "pij.zero" = pij.zero )
 
     # return list of results
     return( res )
@@ -207,6 +249,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         bigNij + sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , bigCj , "*" ) , 1 ,
         rowSums( bigNij ) + rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , bigCj , "*" ) ) , "/" )
 
+      # adjust for structural zeros in transition matrix
+      if ( !is.null( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
+
       # calculate changes
       these_diffs <- c( c( rhoMMiv - rhoMMi0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -241,7 +286,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "rhoMM" = rhoMMiv ,
         "eta" = etav ,
         "pij" = pijv ,
-        "muij" = N * sweep( pijv , 1 , etav , "*" ) )
+        "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "pij.zero" = pij.zero )
 
     # return list of results
     return( res )
@@ -299,6 +345,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
             rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , bigCj , "*" ) ) +
             bigM * rowSums( nipijrhoMM ) / sum( nipijrhoMM ) , "/" )
 
+      # adjust for structural zeros in transition matrix
+      if ( !is.null( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
+
       # calculate changes
       these_diffs <- c( c( rhoRRjv - rhoRRj0 ) , c( rhoMMjv - rhoMMj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -334,7 +383,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "rhoMM" = rhoMMjv ,
         "eta" = etav ,
         "pij" = pijv ,
-        "muij" = N * sweep( pijv , 1 , etav , "*" ) )
+        "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "pij.zero" = pij.zero )
 
     # return list of results
     return( res )
@@ -347,6 +397,4 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
   mfit
 
 }
-
-
 

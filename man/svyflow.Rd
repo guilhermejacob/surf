@@ -15,11 +15,12 @@
   x,
   design,
   rounds = c(0, 1),
-  model = c("A", "B", "C", "D"),
-  tol = 1e-08,
+  model = c("A", "B", "C", "D", "naive"),
+  tol = 1e-06,
   verbose = FALSE,
   starting.values = list(psi = NULL, rhoRR = NULL, rhoMM = NULL, eta = NULL, pij =
-    NULL)
+    NULL),
+  pij.zero = NULL
 )
 }
 \arguments{
