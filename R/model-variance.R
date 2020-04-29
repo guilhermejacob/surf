@@ -127,7 +127,7 @@ ipf_variance <- function( xx , ww , res , design ) {
 
     # special variables
     a3 <- sum( bigRi ) / ( sum( bigNij ) + sum( bigRi ) )^2
-    a4 <- sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
+    a4 <- - sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
 
     # linearized variable e_psi
     e_rhoRR <- a3 + a4 * ( 1 - zz[,2] )
@@ -254,7 +254,7 @@ ipf_variance <- function( xx , ww , res , design ) {
 
     # special variables
     a3 <- sum( bigRi ) / ( sum( bigNij ) + sum( bigRi ) )^2
-    a4 <- sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
+    a4 <- - sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) )^2
 
     # linearized variable e_psi
     e_rhoRR <- a3 + a4 * ( 1 - zz[,2] )
