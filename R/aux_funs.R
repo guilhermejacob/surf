@@ -1,4 +1,8 @@
-#' @importFrom stats model.frame model.matrix na.pass printCoefmat terms terms.formula update weights formula as.formula
+#' @importFrom stats model.frame model.matrix na.pass printCoefmat terms terms.formula update weights formula as.formula var pchisq
+#' @importFrom Matrix solve
+#' @importFrom abind abind
+#' @importFrom stringr str_pad
+#' @importFrom scales number
 
 #' @importFrom survey postStratify
 #' @export

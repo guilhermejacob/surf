@@ -20,7 +20,7 @@ print.surflow.design <-function(x, varnames=TRUE,design.summaries=FALSE,...){
       cat("(n-1) bootstrap ")
     nweights <- ncol(x$repweights)
     cat("with", nweights, "replicates")
-    if (!is.null(x$mse) && x$mse)
+    if (!is.null(x$mse) & x$mse)
       cat(" and MSE variances")
     cat(".\n")
   } else {
@@ -101,7 +101,7 @@ summary.surflow.design <-function(object,varnames=TRUE,...){
       cat("(n-1) bootstrap ")
     nweights <- ncol(object$repweights)
     cat("with", nweights, "replicates")
-    if (!is.null(object$mse) && object$mse)
+    if (!is.null(object$mse) & object$mse)
       cat(" and MSE variances")
     cat(".\n")
   } else {

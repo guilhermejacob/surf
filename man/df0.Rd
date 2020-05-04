@@ -7,7 +7,7 @@
 \alias{artificial}
 \title{Artificial datasets}
 \format{
-Two objects of class \code{data.frame}: \code{dfa0, dfa1}.
+Two objects of class \code{data.frame}: \code{df0, df1}.
 }
 \usage{
 data("artificial")
@@ -26,7 +26,7 @@ t0     \tab 2    \tab  .015     \tab .030     \tab .005     \cr
        \tab 3    \tab  .005     \tab .005     \tab .040     \cr
 }
 
-The \code{dfa0} contains the inclusion probabilities in the \code{prob} column.
+The \code{df0} contains the inclusion probabilities in the \code{prob} column.
 }
 \seealso{
 \code{\link{dfr0}} for real data from a Brazilian survey.

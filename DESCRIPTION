@@ -10,7 +10,10 @@ Depends:
     R (>= 3.5.0),
     stats,
     survey,
-    abind
+    Matrix,
+    abind,
+    scales,
+    stringr
 License: GPL-3
 LazyData: true
 Suggests:

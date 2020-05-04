@@ -7,6 +7,9 @@
 #' @param design  surflow.design object
 #' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param model  model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
+#' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{tol = 1e-6}.
+#' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
+#' @param pij.zero  A logical matrix defining structural zeroes in transition matrix. Defaults to \code{pij.zero = NULL}.
 #' @param ...  future expansion.
 #'
 #' @details The \code{na.rm} option should be used cautiously. Usually, \code{NA} encoding has two possible meanings: a \emph{missing} information or
@@ -36,6 +39,10 @@
 #' Hoboken: John Wiley & Sons, 2010. (Wiley Series in Survey Methodology). ISBN 978-0-470-28430-8.
 #'
 #' @examples
+#'
+#' # load library
+#' library( surf )
+#'
 #' # load data
 #' data( "artificial" )
 #'
@@ -54,7 +61,11 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
+svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) , tol = 1e-6 , verbose = FALSE , pij.zero = NULL ){
+
+  # test values
+  model <- match.arg( model , c("A","B","C","D", "MCAR" ) , several.ok = FALSE )
+  if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
 
   # Collect sample data and put in single data frame
   xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
@@ -66,7 +77,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   xlevels <- lapply( xx , function(zz) levels( zz ) )
   # Gets dimension of variable for which flows are to be estimated
   ll <- lapply( xlevels , function(zz) length( zz ) )
-  if ( !all( ll[[1]] == ll[[2]] && xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
+  if ( !all( ll[[1]] == ll[[2]] & xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
   # When levels are the same across periods, returns unique levels of variable for which flows are to be estimated
   xlevels <- unique( unlist(xlevels) )
   # Gets dimension of variable for which flows are to be estimated
@@ -83,7 +94,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   if ( !any( is.na( xx[ ww > 0 ,] ) ) ) {
 
     # model fitting
-    mfit <- ipf( xx , ww , model = "MCAR" , tol = list(`...`)[["tol"]] , verbose = list(`...`)[["verbose"]] , starting.values = list(`...`)[["starting.values"]] , pij.zero = list(`...`)[["pij.zero"]] )
+    mfit <- ipf( xx , ww , model = "MCAR" , tol = tol , verbose = verbose , pij.zero = pij.zero )
 
     # variance estimation
     mvar <- ipf_variance( xx , ww , res = mfit , design = design )
@@ -91,7 +102,7 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   } else {
 
     # model fitting
-    mfit <- ipf( xx , ww , model = model , tol = list(`...`)[["tol"]] , verbose = list(`...`)[["verbose"]] , starting.values = list(`...`)[["starting.values"]] , pij.zero = list(`...`)[["pij.zero"]] )
+    mfit <- ipf( xx , ww , model = model , tol = tol , verbose = verbose , pij.zero = pij.zero )
 
     # variance estimation
     mvar <- ipf_variance( xx , ww , res = mfit , design = design )
@@ -132,100 +143,9 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
 
 #' @export
 #' @rdname svyflow
-#' @method svyflow svyrep.design
-svyflow.svyrep.design <- function( x , design , rounds , model , ... ){
-
-
-  # Collect sample data and put in single data frame
-  xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
-  xx <- do.call( cbind , xx )
-
-  # Test column format
-  if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
-  # Gets levels of factors for both time periods
-  xlevels <- lapply( xx , function(zz) levels( zz ) )
-  # Gets dimension of variable for which flows are to be estimated
-  ll <- lapply( xlevels , function(zz) length( zz ) )
-  if ( !all( ll[[1]] == ll[[2]] && xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
-  # When levels are the same across periods, returns unique levels of variable for which flows are to be estimated
-  xlevels <- unique( unlist(xlevels) )
-  # Gets dimension of variable for which flows are to be estimated
-  ll <- unique( unlist(ll) )
-  has.order <- ifelse( all( sapply( xx , is.ordered ) ) , TRUE , FALSE )
-
-  # Revise names of columns on sample response data set
-  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) - 1 , ":" , colnames( xx ) )
-
-  # Collect weights
-  ww <-  stats::weights( design , "sampling" )
-
-  # model fitting
-  mfit <- ipf( xx , ww , model = model , tol = tol , verbose = verbose )
-
-  # get replication weights
-  wr <- stats::weights( design , "analysis" )
-
-  # calculate replicates
-  lres <- lapply( seq_len(ncol(wr)) , function( irep , model = mfit$model ) {
-    ipf( xx , wr[,irep] , model = model , starting.values = mfit )
-  } )
-
-  # collect replicates
-  res1 <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" ) , function(z) {
-    qq <- lapply( lres , `[[` , z )
-    qq <- do.call( rbind , qq )
-    vmat <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( mfit[[z]] ) ) )
-    diag( vmat )
-  } , simplify = FALSE )
-  res2 <- sapply( c( "pij" , "muij" ) , function(z) {
-    qq <- lapply( lres , `[[` , z )
-    qq <- abind::abind( qq , along = 3 )
-    nr <- dim(qq)[1]
-    qq <- lapply( seq_len(nr) , function(zz) t( qq[zz,,] ) )
-    qq <- do.call( cbind , qq )
-    vmat <- survey::svrVar( qq , design$scale , design$rscales , mse = design$mse , coef = matrix( t( mfit[[z]] ) ) )
-    vmat <- diag( vmat )
-    matrix( vmat , byrow = TRUE , nrow = nr )
-  } , simplify = FALSE )
-  mvar <- c( res1 , res2 )
-
-  # build results list
-  res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" ) , function(z) {
-    if ( z %in% c( "psi" , "rhoRR" , "rhoMM" , "eta" ) ) {
-      this_stats <- mfit[[z]]
-      attr( this_stats , "var" ) <- mvar[[z]]
-      names( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
-      class( this_stats ) <- "svystat"
-      attr( this_stats , "statistic" ) <- z
-    } else if ( z %in% c( "pij" , "muij" ) ) {
-      this_stats <- mfit[[z]]
-      attr( this_stats , "var" ) <- mfit[[z]]
-      attr( this_stats , "var" )[,] <- mvar[[z]][,]
-      class( this_stats ) <- "svymstat"
-      attr( this_stats , "statistic" ) <- z
-    }
-    return(this_stats)
-  } , simplify = FALSE )
-
-  # create final object
-  rval <- res
-  rval$model <- mfit$model
-  class(rval) <- "flowstat"
-  attr( rval , "rounds" )    <- rounds
-  attr( rval , "formula" )   <- x
-  attr( rval , "has.order" )   <- has.order
-  attr( rval , "iter" )   <- mfit$iter
-  rval
-
-}
-
-#' @export
-#' @rdname svyflow
 #' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , rounds = c(0,1) , model = c("A","B","C","D", "MCAR" ) , tol = 1e-6 , verbose = FALSE , starting.values = list( "psi" = NULL , "rhoRR" = NULL , "rhoMM" = NULL, "eta" = NULL , "pij" = NULL ) , pij.zero = NULL ) {
-  model <- match.arg( model , several.ok = FALSE )
-  if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
-  NextMethod( "svyflow" , design = design , rounds = rounds , model = model , tol = tol , verbose = verbose , starting.values = starting.values , pij.zero = pij.zero )
+svyflow.surflow.design <- function( x , design , ... ) {
+  NextMethod( "svyflow" , design , ... )
 }
 
 #' @export

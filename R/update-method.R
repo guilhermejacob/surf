@@ -14,13 +14,13 @@
 #' flowdes <-
 #' sfydesign( ids = ~ 1 ,
 #'                probs = ~ prob ,
-#'                data = list( dfa0 , dfa1 ) ,
+#'                data = list( df0 , df1 ) ,
 #'                nest = TRUE )
 #'
 #' # update
 #' flowdes <-
 #'      update( flowdes ,
-#'              idstatus = factor( v0 ,
+#'              idstatus = factor( y ,
 #'                                 levels = 1:3 ,
 #'                                 labels = c( "A" , "B" , "C" ) ) )
 #'

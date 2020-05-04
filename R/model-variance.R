@@ -1,8 +1,22 @@
 # function for model variance calculation
 ipf_variance <- function( xx , ww , res , design ) {
 
+  # # load objects
+  # for ( this_obj in names( res ) ) assign( this_obj , res[[this_obj]] )
+
   # load objects
-  for ( this_obj in names( res ) ) assign( this_obj , res[[this_obj]] )
+  bigNij <- res[["bigNij"]]
+  bigRi <- res[["bigRi"]]
+  bigCj <- res[["bigCj"]]
+  bigM <- res[["bigM"]]
+  psi <- res[["psi"]]
+  rhoRR <- res[["rhoRR"]]
+  rhoMM <- res[["rhoMM"]]
+  eta <- res[["eta"]]
+  pij <- res[["pij"]]
+  muij <- res[["muij"]]
+  pij.zero <- res[["pij.zero"]]
+  N <- res[["N"]]
 
   # yy array - see Rojas et al. (2014, p.294)
   yy <- array( 0  , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( xx ) ) )
@@ -95,7 +109,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
-    srs_vcov <- svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
+    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
     srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
     ### combine results
@@ -245,7 +259,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
-    srs_vcov <- svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
+    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
     srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
     ### combine results
@@ -416,7 +430,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
-    srs_vcov <- svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
+    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
     srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
     ### combine results
@@ -596,7 +610,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
-    srs_vcov <- svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
+    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
     srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
     ### combine results
@@ -781,7 +795,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
-    srs_vcov <- svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
+    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
     srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
     ### combine results
@@ -807,7 +821,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # # DeltaMat <- Matrix::solve( mvar$vcov_full ) %*% mvar$vcov_srs
     # d0 <- sum( diag( DeltaMat ) )^2 / ( sum( diag( DeltaMat %*% DeltaMat ) ) )
     # nu <- length( unique( design$cluster[, 1] ) ) - length( unique( design$strata[,1] ) )
-    # pearson <- chisq.test( res$estimated.counts , correct = FALSE )
+    # pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
     # pearson$statistic <- pearson$statistic / sum( diag( DeltaMat ) )
     # pearson$p.value <- pf( pearson$statistic, d0, d0 * nu, lower.tail = FALSE )
     # attr( pearson$statistic, "names" ) <- "F"
@@ -817,9 +831,9 @@ ipf_variance <- function( xx , ww , res , design ) {
 
     # Chi-2 Distribution
     DeltaMat <- Matrix::solve( mvar$muij ) %*% mvar$vcov_srs
-    pearson <- chisq.test( res$estimated.counts , correct = FALSE )
+    pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
     pearson$statistic <- pearson$statistic / sum( diag( DeltaMat ) )
-    pearson$p.value <- pchisq(pearson$statistic/mean(diag(DeltaMat)), df = NCOL(DeltaMat) , lower.tail = FALSE)
+    pearson$p.value <- pchisq( pearson$statistic / mean( diag( DeltaMat ) ), df = NCOL( DeltaMat ) , lower.tail = FALSE)
     pearson$parameter <- c(df = NCOL(DeltaMat))
     pearson$method <- "Pearson's X^2: 1st Rao & Scott adjustment"
     pearson$data.name <- "estimated counts"

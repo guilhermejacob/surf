@@ -25,7 +25,7 @@
 #' flowdes <-
 #' sfydesign( ids = ~ 1 ,
 #'                probs = ~ prob ,
-#'                data = list( dfa0 , dfa1 ) ,
+#'                data = list( df0 , df1 ) ,
 #'                nest = TRUE )
 #'
 #' # transform in replicate design

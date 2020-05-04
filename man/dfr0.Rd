@@ -17,6 +17,6 @@ Amazonas state subset of the Brazilian Continous Household Survey,
 containing data from paired observations in the 1st and 2nd quarters of 2018.
 }
 \seealso{
-\code{\link{dfa0}} for artificial data from a pseudo-population.
+\code{\link{df0}} for artificial data from a pseudo-population.
 }
 \keyword{real}

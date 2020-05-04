@@ -11,7 +11,7 @@
 #'
 #' @format Two objects of class \code{data.frame}: \code{dfr0, dfr0}
 #'
-#' @seealso \code{\link{dfa0}} for artificial data from a pseudo-population.
+#' @seealso \code{\link{df0}} for artificial data from a pseudo-population.
 #'
 #' @keywords real
 "dfr0"
@@ -35,9 +35,9 @@
 #'        \tab 3    \tab  .005     \tab .005     \tab .040     \cr
 #' }
 #'
-#' The \code{dfa0} contains the inclusion probabilities in the \code{prob} column.
+#' The \code{df0} contains the inclusion probabilities in the \code{prob} column.
 #'
-#' @format Two objects of class \code{data.frame}: \code{dfa0, dfa1}.
+#' @format Two objects of class \code{data.frame}: \code{df0, df1}.
 #'
 #' @seealso \code{\link{dfr0}} for real data from a Brazilian survey.
 #'

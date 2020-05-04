@@ -3,34 +3,35 @@
 \name{svyflow}
 \alias{svyflow}
 \alias{svyflow.survey.design2}
-\alias{svyflow.svyrep.design}
 \alias{svyflow.surflow.design}
 \title{Gross flow estimation between categories}
 \usage{
-\method{svyflow}{survey.design2}(x, design, rounds, model, ...)
-
-\method{svyflow}{svyrep.design}(x, design, rounds, model, ...)
-
-\method{svyflow}{surflow.design}(
+\method{svyflow}{survey.design2}(
   x,
   design,
+  model = "A",
   rounds = c(0, 1),
-  model = c("A", "B", "C", "D", "MCAR"),
   tol = 1e-06,
   verbose = FALSE,
-  starting.values = list(psi = NULL, rhoRR = NULL, rhoMM = NULL, eta = NULL, pij =
-    NULL),
   pij.zero = NULL
 )
+
+\method{svyflow}{surflow.design}(x, design, ...)
 }
 \arguments{
 \item{x}{a formula indicating a \emph{factor} variable.}
 
 \item{design}{surflow.design object}
 
+\item{model}{model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.}
+
 \item{rounds}{a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.}
 
-\item{model}{model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.}
+\item{tol}{Tolerance for iterative proportional fitting. Defaults to \code{tol = 1e-6}.}
+
+\item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
+
+\item{pij.zero}{A logical matrix defining structural zeroes in transition matrix. Defaults to \code{pij.zero = NULL}.}
 
 \item{...}{future expansion.}
 }
@@ -56,6 +57,10 @@ we should filter for people emplyed in both the first \emph{and} second rounds. 
 actual missing responses.
 }
 \examples{
+
+
+# load library
+library( surf )
 
 # load data
 data( "artificial" )
