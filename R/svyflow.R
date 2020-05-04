@@ -61,7 +61,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) , tol = 1e-6 , verbose = FALSE , pij.zero = NULL ){
+svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) , tol = 1e-6 , verbose = FALSE , pij.zero = NULL , ... ){
 
   # test values
   model <- match.arg( model , c("A","B","C","D", "MCAR" ) , several.ok = FALSE )

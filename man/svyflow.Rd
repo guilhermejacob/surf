@@ -13,7 +13,8 @@
   rounds = c(0, 1),
   tol = 1e-06,
   verbose = FALSE,
-  pij.zero = NULL
+  pij.zero = NULL,
+  ...
 )
 
 \method{svyflow}{surflow.design}(x, design, ...)
