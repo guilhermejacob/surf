@@ -1,5 +1,5 @@
-
+# load library
 library(testthat)
-library(surf)
 
-# test_check("surf")
+# run tests
+test_check("surf")
