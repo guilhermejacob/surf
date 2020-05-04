@@ -124,6 +124,8 @@ svyflow.survey.design2 <- function( x , design , rounds , model , ... ){
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
   attr( rval , "iter" )   <- mfit$iter
+  attr( rval , "unadj.chisq" )   <- mfit$unadj.chisq
+  attr( rval , "adj.chisq" )   <- mvar$adj.chisq
   rval
 
 }

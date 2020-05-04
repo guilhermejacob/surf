@@ -15,7 +15,7 @@
   x,
   design,
   rounds = c(0, 1),
-  model = c("A", "B", "C", "D", "naive"),
+  model = c("A", "B", "C", "D", "MCAR"),
   tol = 1e-06,
   verbose = FALSE,
   starting.values = list(psi = NULL, rhoRR = NULL, rhoMM = NULL, eta = NULL, pij =

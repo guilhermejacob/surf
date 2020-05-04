@@ -235,6 +235,10 @@ print.flowstat <- function( x , var.type = c("se","var","cv") , ... ) {
   print( x[["rhoMM"]] )
   cat( paste0( "\nGross Flows" , "\n" ) )
   print.svymstat( x[["muij"]] )
+  if ( !is.null( attr( x , "adj.chisq" ) ) ){
+    cat( paste0( "\n" , "\n" ) )
+    print( attr( x , "adj.chisq" ) )
+  }
   invisible(x)
 
 }

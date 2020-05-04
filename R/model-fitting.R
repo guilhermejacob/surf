@@ -113,9 +113,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
         "pij.zero" = pij.zero )
 
-    # return list of results
-    return( res )
-
   } ,
   B ={
     # Obtain maximum pseudo-likelihood estimates for response model parameters
@@ -126,7 +123,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
     # Obtain starting values for estimating superpopulation model flow parameters
     # psii, eta and pij according to Result 4.8 of Rojas (2014, p.49)
     # psii0 <- psiiv <- rep( sum( bigNij ) + sum( bigRi ) , nrow( bigNij ) ) / N
-    psii0 <- psiiv <- if ( is.null( starting.values[["psi"]] ) ) ( rowSums( bigNij ) + bigRi ) / N else starting.values[["psi"]]
+    psii0 <- psiiv <- if ( is.null( starting.values[["psi"]] ) ) rep( ( sum( bigNij ) + sum( bigRi ) ) / N , nrow( bigNij ) ) else starting.values[["psi"]]
     eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
     pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 2 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
     maxdiff <- Inf
@@ -156,7 +153,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       etav <-
         ( rowSums( bigNij ) + bigRi +
             rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , bigCj , "*" ) ) +
-            bigM * ( psicni / sum( psicni ) ) ) / ( sum( bigNij ) + sum( bigRi ) + sum( bigCj ) + bigM )
+            bigM * ( psicni / sum( psicni ) ) ) / N
 
       # calculate pij v+1
       pijv <-
@@ -203,8 +200,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
         "pij.zero" = pij.zero )
 
-    # return list of results
-    return( res )
   } ,
   C = {
 
@@ -289,8 +284,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
         "pij.zero" = pij.zero )
 
-    # return list of results
-    return( res )
   } ,
   D = {
 
@@ -386,9 +379,33 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
         "pij.zero" = pij.zero )
 
-    # return list of results
-    return( res )
   } )
+
+  ### unadjusted chi-distances
+  observed.props  <- cbind( rbind( mfit$bigNij , mfit$bigRi ) , c( mfit$bigCj , mfit$bigM ) ) / mfit$N
+  estimated.Nij   <- sweep( mfit$pij , 1 , mfit$rhoRR * mfit$psi * mfit$eta , "*" )
+  estimated.Ri    <- mfit$psi * ( 1 - mfit$rhoRR ) * rowSums( sweep( mfit$pij , 1 , mfit$eta , "*" ) )
+  estimated.Cj    <- ( 1 - mfit$psi ) * ( 1 - mfit$rhoMM ) * colSums( sweep( mfit$pij , 1 , mfit$eta , "*" ) )
+  estimated.M     <- sum( sweep( mfit$pij , 1 , mfit$rhoMM * ( 1 - mfit$psi ) * mfit$eta , "*" ) )
+  estimated.props <- cbind( rbind( estimated.Nij , estimated.Ri ) , c( estimated.Cj , estimated.M ) )
+  chimat <- ( observed.props - estimated.props )^2 / estimated.props
+  dimnames( chimat ) <- NULL
+
+  # store estimated counts
+  mfit[["estimated.counts"]] <- estimated.props * N
+
+  # adjust for structural zeros in transition matrix
+  if ( !is.null( pij.zero ) ) chimat[ pij.zero ] <- 0
+
+  # calculate number of observations
+  smalln <- sum( ww > 0 )
+
+  # calculate unadjusted test score
+  chimat <- smalln * chimat
+  chiscore <- sum( chimat )
+
+  # store unadjusted chi-square test score
+  mfit[["unadj.chisq"]] <- chiscore
 
   # verbose treat
   if (verbose) cat( "\n\n" )
