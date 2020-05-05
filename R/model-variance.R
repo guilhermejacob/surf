@@ -106,13 +106,10 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
-    ### gamma
-
     # calculate linearized variables
-    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
-    for( j in ncol( u_gamma ) ) {
-      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
-    }
+    u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
+      rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
+    } )
 
     # calculate variance of gamma
     gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
@@ -207,7 +204,7 @@ ipf_variance <- function( xx , ww , res , design ) {
     # Calculate jacobian for estimating the variance of eta parameters
     jeta <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
-      jeta[i] <- - sum( bigNij[i,] ) / eta[i]^2 - sum( bigCj * pij[i,]^2 / colSums( nipij )[i]^2 )
+      jeta[i] <- - sum( bigNij[i,] ) / eta[i]^2 - sum( bigCj * pij[i,]^2 / colSums( nipij )[i]^2 ) - bigM
     }
 
     # divide u_eta by the jacobian
@@ -231,8 +228,8 @@ ipf_variance <- function( xx , ww , res , design ) {
     # Calculate jacobian for estimating the variance of pij parameters
     jpij <- array( 0 , dim = c( nrow(bigNij) , ncol(bigNij) ) )
     for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
-      jpij[i,j] <- - bigNij[i,j] / pij[i,j]^2 - bigCj[j] * eta[i]^2 / colSums( nipij )[j]^2
-      # jpij[i,j] <- - bigNij[i,j] / pij[i,j]^2 - bigRi[i] - bigCj[j] * eta[i]^2 / colSums( nipij )[j]^2
+      # jpij[i,j] <- - bigNij[i,j] / pij[i,j]^2 - bigCj[j] * eta[i]^2 / colSums( nipij )[j]^2
+      jpij[i,j] <- - bigNij[i,j] / pij[i,j]^2 - bigRi[i] - bigCj[j] * eta[i]^2 / colSums( nipij )[j]^2 - bigM * eta[i]^2
     }
 
     # divide u_pij by the jacobian
@@ -274,10 +271,9 @@ ipf_variance <- function( xx , ww , res , design ) {
     ### gamma
 
     # calculate linearized variables
-    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
-    for( j in ncol( u_gamma ) ) {
-      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
-    }
+    u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
+      rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
+    } )
 
     # calculate variance of gamma
     gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
@@ -460,10 +456,9 @@ ipf_variance <- function( xx , ww , res , design ) {
     ### gamma
 
     # calculate linearized variables
-    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
-    for( j in ncol( u_gamma ) ) {
-      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
-    }
+    u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
+      rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
+    } )
 
     # calculate variance of gamma
     gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
@@ -652,13 +647,10 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
-    ### gamma
-
     # calculate linearized variables
-    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
-    for( j in ncol( u_gamma ) ) {
-      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
-    }
+    u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
+      rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
+    } )
 
     # calculate variance of gamma
     gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
@@ -852,13 +844,10 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
-    ### gamma
-
     # calculate linearized variables
-    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
-    for( j in ncol( u_gamma ) ) {
-      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
-    }
+    u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
+      rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
+    } )
 
     # calculate variance of gamma
     gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )

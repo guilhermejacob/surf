@@ -54,7 +54,7 @@ It is important to distinguish missing responses from unnaplicable responses. Th
 for only applicable responses (with actual missing responses, if that is the case). For instance, suppose that we have two encoded variables:
 (a) employed/unemployed; and (b) type of contract, with NAs if the response is missing or is unnaplicable. The answers of (a) define what are
 the applicable responses for responses for (b). In this case, if we are going to analyze contract changes from people employed in the first round,
-we should filter for people emplyed in both the first \emph{and} second rounds. This can be done using \code{subset}. Then, the remaining \code{NAs} are
+we should filter for people employed in both the first \emph{and} second rounds. This can be done using \code{subset}. Then, the remaining \code{NA} are
 actual missing responses.
 }
 \examples{
