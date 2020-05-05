@@ -224,7 +224,7 @@ print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
 }
 
 #' @exportS3Method print flowstat
-print.flowstat <- function( x , var.type = c("se","var","cv") , ... ) {
+print.flowstat <- function( x , ... ) {
 
   cat( paste0( "Model " , x$model , "\n" ) )
   cat( paste0( "\nInitial Response Probability" , "\n" ) )
@@ -233,6 +233,10 @@ print.flowstat <- function( x , var.type = c("se","var","cv") , ... ) {
   print( x[["rhoRR"]] )
   cat( paste0( "\nNon-Respondent to Non-Respondent Transition Probability" , "\n" ) )
   print( x[["rhoMM"]] )
+  # cat( paste0( "\nInitial Distribution" , "\n" ) )
+  # print( x[["eta"]] )
+  # cat( paste0( "\nFinal Distribution" , "\n" ) )
+  # print( x[["gamma"]] )
   cat( paste0( "\nGross Flows" , "\n" ) )
   print.svymstat( x[["muij"]] )
   if ( !is.null( attr( x , "adj.chisq" ) ) ){

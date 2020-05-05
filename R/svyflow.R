@@ -110,8 +110,8 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) ,
   }
 
   # build results list
-  res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" ) , function(z) {
-    if ( z %in% c( "psi" , "rhoRR" , "rhoMM" , "eta" ) ) {
+  res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" , "gamma" ) , function(z) {
+    if ( z %in% c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" ) ) {
       this_stats <- mfit[[z]]
       attr( this_stats , "var" ) <- mvar[[z]]
       names( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
@@ -128,7 +128,7 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) ,
   } , simplify = FALSE )
 
   # create final object
-  rval <- res
+  rval <- res[ c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" , "pij" , "muij" ) ]
   rval$model <- mfit$model
   class(rval) <- "flowstat"
   attr( rval , "rounds" )    <- rounds

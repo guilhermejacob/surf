@@ -38,8 +38,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = eta ,
         "pij" = pij ,
         "muij" = N * sweep( pij , 1 , eta , "*" ) ,
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
         "pij.zero" = pij.zero )
-
     # return list of results
     return( res )
 
@@ -111,8 +111,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
         "pij.zero" = pij.zero )
-
   } ,
   B ={
     # Obtain maximum pseudo-likelihood estimates for response model parameters
@@ -198,6 +198,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
         "pij.zero" = pij.zero )
 
   } ,
@@ -282,6 +283,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
         "pij.zero" = pij.zero )
 
   } ,
@@ -377,6 +379,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
         "pij.zero" = pij.zero )
 
   } )

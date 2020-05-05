@@ -106,6 +106,20 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
+    ### gamma
+
+    # calculate linearized variables
+    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
+    for( j in ncol( u_gamma ) ) {
+      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
+    }
+
+    # calculate variance of gamma
+    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    gamma_var <- diag( gamma_var )
+
+    ### 1st rao-scott correction
+
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
@@ -123,6 +137,7 @@ ipf_variance <- function( xx , ww , res , design ) {
         "eta" = eta_var ,
         "pij" = pij_var ,
         "muij" = muij_var ,
+        "gamma" = gamma_var ,
         "vcov_full" = des_vcov ,
         "vcov_srs"  = srs_vcov )
 
@@ -256,6 +271,20 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
+    ### gamma
+
+    # calculate linearized variables
+    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
+    for( j in ncol( u_gamma ) ) {
+      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
+    }
+
+    # calculate variance of gamma
+    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    gamma_var <- diag( gamma_var )
+
+    ### 1st rao-scott correction
+
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
@@ -273,6 +302,7 @@ ipf_variance <- function( xx , ww , res , design ) {
         "eta" = eta_var ,
         "pij" = pij_var ,
         "muij" = muij_var ,
+        "gamma" = gamma_var ,
         "vcov_full" = des_vcov ,
         "vcov_srs"  = srs_vcov )
 
@@ -427,6 +457,20 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
+    ### gamma
+
+    # calculate linearized variables
+    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
+    for( j in ncol( u_gamma ) ) {
+      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
+    }
+
+    # calculate variance of gamma
+    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    gamma_var <- diag( gamma_var )
+
+    ### 1st rao-scott correction
+
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
@@ -444,6 +488,7 @@ ipf_variance <- function( xx , ww , res , design ) {
         "eta" = eta_var ,
         "pij" = pij_var ,
         "muij" = muij_var ,
+        "gamma" = gamma_var ,
         "vcov_full" = des_vcov ,
         "vcov_srs"  = srs_vcov )
 
@@ -607,6 +652,20 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
+    ### gamma
+
+    # calculate linearized variables
+    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
+    for( j in ncol( u_gamma ) ) {
+      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
+    }
+
+    # calculate variance of gamma
+    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    gamma_var <- diag( gamma_var )
+
+    ### 1st rao-scott correction
+
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
@@ -624,6 +683,7 @@ ipf_variance <- function( xx , ww , res , design ) {
         "eta" = eta_var ,
         "pij" = pij_var ,
         "muij" = muij_var ,
+        "gamma" = gamma_var ,
         "vcov_full" = des_vcov ,
         "vcov_srs"  = srs_vcov )
 
@@ -792,6 +852,20 @@ ipf_variance <- function( xx , ww , res , design ) {
     des_vcov <- muij_var # full variance-covariance matrix
     muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
+    ### gamma
+
+    # calculate linearized variables
+    u_gamma <-apply( sweep( u_pij , 2 , eta , "*" ) , 1:2 , sum )
+    for( j in ncol( u_gamma ) ) {
+      u_gamma[,j] <- rowSums( sweep( u_eta , 2 , pij[,j] , "*" ) )
+    }
+
+    # calculate variance of gamma
+    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    gamma_var <- diag( gamma_var )
+
+    ### 1st rao-scott correction
+
     # calculate variance under SRS with replacement
     # for Kish DEff
     nobs <- sum( ww > 0 )
@@ -809,6 +883,7 @@ ipf_variance <- function( xx , ww , res , design ) {
         "eta" = eta_var ,
         "pij" = pij_var ,
         "muij" = muij_var ,
+        "gamma" = gamma_var ,
         "vcov_full" = des_vcov ,
         "vcov_srs"  = srs_vcov )
 
