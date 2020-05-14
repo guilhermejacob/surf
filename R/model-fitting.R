@@ -125,7 +125,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
     # psii0 <- psiiv <- rep( sum( bigNij ) + sum( bigRi ) , nrow( bigNij ) ) / N
     psii0 <- psiiv <- if ( is.null( starting.values[["psi"]] ) ) rep( ( sum( bigNij ) + sum( bigRi ) ) / N , nrow( bigNij ) ) else starting.values[["psi"]]
     eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
-    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 2 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
+    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
     maxdiff <- Inf
     v = 0
 
@@ -295,8 +295,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
 
     # Obtain starting values for estimating superpopulation model flow parameters
     # rhoRRj, RhoMMj, eta and pij
-    rhoRRj0 <- rhoRRjv <- if ( is.null( starting.values[["rhoRR"]] ) ) colSums( bigNij ) / ( colSums( bigNij ) + sum( bigRi ) ) else starting.values[["rhoRR"]]
-    rhoMMj0 <- rhoMMjv <- if ( is.null( starting.values[["rhoMM"]] ) ) 1 - bigCj / bigM else starting.values[["rhoMM"]]
+    rhoRRj0 <- rhoRRjv <- if ( is.null( starting.values[["rhoRR"]] ) ) rep( sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) ) , ncol( bigNij ) ) else starting.values[["rhoRR"]]
+    rhoMMj0 <- rhoMMjv <- if ( is.null( starting.values[["rhoMM"]] ) ) rep( bigM / ( sum( bigCj ) + bigM ) , ncol( bigNij ) ) else starting.values[["rhoMM"]]
     eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
     pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
     maxdiff <- Inf
