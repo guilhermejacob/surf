@@ -10,10 +10,11 @@
   x,
   design,
   model = "A",
-  rounds = c(0, 1),
-  tol = 1e-06,
+  rounds = c(1, 2),
+  tol = 1e-04,
   verbose = FALSE,
   pij.zero = NULL,
+  variance = FALSE,
   ...
 )
 
@@ -28,7 +29,7 @@
 
 \item{rounds}{a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.}
 
-\item{tol}{Tolerance for iterative proportional fitting. Defaults to \code{tol = 1e-6}.}
+\item{tol}{Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.}
 
 \item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
 
@@ -70,7 +71,7 @@ data( "artificial" )
 flowdes <-
   sfydesign( ids = ~0 ,
                  probs = ~ prob ,
-                 data = list( df0 , df1 ) ,
+                 data = list( df1 , df2 ) ,
                  nest = TRUE )
 
 # flow estimates

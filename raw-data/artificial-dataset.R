@@ -66,10 +66,10 @@ smp_df <- pop_nonrespose[ sample( N , n ) , c( "v0" , "v1" ) ]
 smp_df$prob <- n / N # selection probabilities
 
 # adjust data.frames
-df0 <- smp_df[ , -2 , drop = FALSE ]
-df1 <- smp_df[ , 2 , drop = FALSE ]
-colnames( df0 )[1] <- "y"
+df1 <- smp_df[ , -2 , drop = FALSE ]
+df2 <- smp_df[ , 2 , drop = FALSE ]
 colnames( df1 )[1] <- "y"
+colnames( df2 )[1] <- "y"
 
 # save results
-save( list = c("df0","df1") , file = "data/artificial.rda" , compress = "xz" )
+save( list = c("df1","df2") , file = "data/artificial.rda" , compress = "xz" )

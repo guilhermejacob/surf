@@ -71,10 +71,10 @@ print.surflow.design <-function(x, varnames=TRUE,design.summaries=FALSE,...){
       }
     }
   }
-  cat("Number of repetitions:", length( x$variables ) - 1 , "\n" )
+  cat("Number of rounds:", length( x$variables ) , "\n" )
   if (varnames){
     cat("Data variables:\n")
-    print( Reduce( intersect , sapply( x$variables , colnames ) ) )
+    print( Reduce( intersect , lapply( x$variables , colnames ) ) )
   }
   invisible(x)
 }
@@ -152,10 +152,10 @@ summary.surflow.design <-function(object,varnames=TRUE,...){
       }
     }
   }
-  cat("Number of repetitions:", length( object$variables ) - 1 , "\n" )
+  cat("Number of rounds:", length( object$variables ) , "\n" )
   if (varnames){
     cat("Data variables:\n")
-    print( Reduce( intersect , sapply( object$variables , colnames ) ) )
+    print( Reduce( intersect , lapply( object$variables , colnames ) ) )
   }
   invisible(object)
 }

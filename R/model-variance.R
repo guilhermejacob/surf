@@ -1,5 +1,5 @@
 # function for model variance calculation
-ipf_variance <- function( xx , ww , res , design ) {
+ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
 
   # # load objects
   # for ( this_obj in names( res ) ) assign( this_obj , res[[this_obj]] )
@@ -34,7 +34,7 @@ ipf_variance <- function( xx , ww , res , design ) {
   for ( i in seq_len( nrow( bigNij ) ) ) for ( j in seq_len( ncol( bigNij ) ) ) y1y2[,i,j] <- yy[,i,1] * yy[,j,2]
 
   # ajusts using onde of the models
-  mvar <- switch( res$model , MCAR = {
+  mlin <- switch( res$model , MCAR = {
 
     ### psi
 
@@ -60,10 +60,6 @@ ipf_variance <- function( xx , ww , res , design ) {
         ( sum( bigNij ) * rowSums( y1y2[,i,] ) - rowSums( bigNij )[i] * rowSums( y1y2[,i,] ) * ( 1 - zz[,1] ) * ( 1 - zz[,2] ) ) / sum( bigNij )^2
     }
 
-    # calculate variance of eta
-    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    eta_var <- diag( eta_var )
-
     ### pij
 
     # Calculate scores for estimating the variance of pij parameters
@@ -81,10 +77,6 @@ ipf_variance <- function( xx , ww , res , design ) {
       lin_pij[ , c( t( pij.zero ) ) ] <- 0
     }
 
-    # calculate variance of u_pij sum
-    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### muij
 
     # calculate variance
@@ -101,42 +93,25 @@ ipf_variance <- function( xx , ww , res , design ) {
       lin_muij[ , c( t( pij.zero ) ) ] <- 0
     }
 
-    # calculate variance of muij
-    muij_var <- survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    des_vcov <- muij_var # full variance-covariance matrix
-    muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
+    ### gamma
 
     # calculate linearized variables
     u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
       rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
     } )
 
-    # calculate variance of gamma
-    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    gamma_var <- diag( gamma_var )
-
-    ### 1st rao-scott correction
-
-    # calculate variance under SRS with replacement
-    # for Kish DEff
-    nobs <- sum( ww > 0 )
-    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
-    srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### combine results
 
-    # return final estimates
-    resvar <-
+    # return linearized variables
+    reslin <-
       list(
-        "psi" = psi_var ,
-        "rhoRR" = rhoRR_var ,
-        "rhoMM" = rhoMM_var ,
-        "eta" = eta_var ,
-        "pij" = pij_var ,
-        "muij" = muij_var ,
-        "gamma" = gamma_var ,
-        "vcov_full" = des_vcov ,
-        "vcov_srs"  = srs_vcov )
+        "psi" = NA ,
+        "rhoRR" = NA ,
+        "rhoMM" = NA ,
+        "eta" = u_eta ,
+        "pij" = u_pij ,
+        "muij" = u_muij ,
+        "gamma" = u_gamma )
 
   } , A = {
 
@@ -158,9 +133,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
 
-    # calculate variance of psi
-    psi_var <- survey::svyrecvar( ww * u_psi , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
     ### rhoRR
 
     # Calculate scores for estimating the variance of rhoRR parameters
@@ -172,9 +144,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_rhoRR by the jacobian
     u_rhoRR <- u_rhoRR / jrhoRR
 
-    # calculate variance of rhoRR
-    rhoRR_var <- survey::svyrecvar( ww * u_rhoRR , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
     ### rhoMM
 
     # Calculate scores for estimating the variance of rhoMM parameters
@@ -185,9 +154,6 @@ ipf_variance <- function( xx , ww , res , design ) {
 
     # divide u_rhoMM by the jacobian
     u_rhoMM <- u_rhoMM / jrhoMM
-
-    # calculate variance of rhoMM
-    rhoMM_var <- survey::svyrecvar( ww * u_rhoMM , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
     ### eta
 
@@ -210,10 +176,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_eta by the jacobian
     u_eta <- sweep( u_eta , 2 , jeta , "/" )
 
-    # calculate variance of eta
-    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    eta_var <- diag( eta_var )
-
     ### pij
 
     # Calculate scores for estimating the variance of pij parameters
@@ -235,38 +197,13 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_pij by the jacobian
     u_pij <- sweep( u_pij , 2:3 , jpij , "/" )
 
-    # create matrix of linearized variables
-    lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_pij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of u_pij sum
-    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### muij
 
-    # calculate variance
+    # linearized variable
     u_muij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
     for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
       u_muij[,i,j] <- nipij[i,j] + N * ( pij[i,j] * u_eta[,i] + eta[i] * u_pij[,i,j] )
     }
-
-    # create matrix of linearized variables
-    lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_muij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of muij
-    muij_var <- survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    des_vcov <- muij_var # full variance-covariance matrix
-    muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
 
     ### gamma
 
@@ -275,32 +212,18 @@ ipf_variance <- function( xx , ww , res , design ) {
       rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
     } )
 
-    # calculate variance of gamma
-    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    gamma_var <- diag( gamma_var )
-
-    ### 1st rao-scott correction
-
-    # calculate variance under SRS with replacement
-    # for Kish DEff
-    nobs <- sum( ww > 0 )
-    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
-    srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### combine results
 
-    # return final estimates
-    resvar <-
+    # return linearized variables
+    reslin <-
       list(
-        "psi" = psi_var ,
-        "rhoRR" = rhoRR_var ,
-        "rhoMM" = rhoMM_var ,
-        "eta" = eta_var ,
-        "pij" = pij_var ,
-        "muij" = muij_var ,
-        "gamma" = gamma_var ,
-        "vcov_full" = des_vcov ,
-        "vcov_srs"  = srs_vcov )
+        "psi" = u_psi ,
+        "rhoRR" = u_rhoRR ,
+        "rhoMM" = u_rhoMM ,
+        "eta" = u_eta ,
+        "pij" = u_pij ,
+        "muij" = u_muij ,
+        "gamma" = u_gamma )
 
   } , B ={
 
@@ -335,10 +258,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_psi by the jacobian
     u_psi <- sweep( u_psi , 2 , jpsi , "/" )
 
-    # calculate variance of psi
-    psi_var <- survey::svyrecvar( sweep( u_psi , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    psi_var <- diag( psi_var )
-
     ### rhoRR
 
     # Calculate scores for estimating the variance of rhoRR parameters
@@ -350,9 +269,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_rhoRR by the jacobian
     u_rhoRR <- u_rhoRR / jrhoRR
 
-    # calculate variance of rhoRR
-    rhoRR_var <- survey::svyrecvar( ww * u_rhoRR , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
     ### rhoMM
 
     # Calculate scores for estimating the variance of rhoMM parameters
@@ -363,9 +279,6 @@ ipf_variance <- function( xx , ww , res , design ) {
 
     # divide u_rhoMM by the jacobian
     u_rhoMM <- u_rhoMM / jrhoMM
-
-    # calculate variance of rhoMM
-    rhoMM_var <- survey::svyrecvar( ww * u_rhoMM , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
     ### eta
 
@@ -392,10 +305,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_eta by the jacobian
     u_eta <- sweep( u_eta , 2 , jeta , "/" )
 
-    # calculate variance of eta
-    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    eta_var <- diag( eta_var )
-
     ### pij
 
     # Calculate scores for estimating the variance of pij parameters
@@ -420,18 +329,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_pij by the jacobian
     u_pij <- sweep( u_pij , 2:3 , jpij , "/" )
 
-    # create matrix of linearized variables
-    lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_pij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of u_pij sum
-    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### muij
 
     # calculate variance
@@ -440,19 +337,6 @@ ipf_variance <- function( xx , ww , res , design ) {
       u_muij[,i,j] <- nipij[i,j] + N * ( pij[i,j] * u_eta[,i] + eta[i] * u_pij[,i,j] )
     }
 
-    # create matrix of linearized variables
-    lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_muij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of muij
-    muij_var <- survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    des_vcov <- muij_var # full variance-covariance matrix
-    muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### gamma
 
     # calculate linearized variables
@@ -460,32 +344,18 @@ ipf_variance <- function( xx , ww , res , design ) {
       rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
     } )
 
-    # calculate variance of gamma
-    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    gamma_var <- diag( gamma_var )
-
-    ### 1st rao-scott correction
-
-    # calculate variance under SRS with replacement
-    # for Kish DEff
-    nobs <- sum( ww > 0 )
-    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
-    srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### combine results
 
-    # return final estimates
-    resvar <-
+    # return linearized variables
+    reslin <-
       list(
-        "psi" = psi_var ,
-        "rhoRR" = rhoRR_var ,
-        "rhoMM" = rhoMM_var ,
-        "eta" = eta_var ,
-        "pij" = pij_var ,
-        "muij" = muij_var ,
-        "gamma" = gamma_var ,
-        "vcov_full" = des_vcov ,
-        "vcov_srs"  = srs_vcov )
+        "psi" = u_psi ,
+        "rhoRR" = u_rhoRR ,
+        "rhoMM" = u_rhoMM ,
+        "eta" = u_eta ,
+        "pij" = u_pij ,
+        "muij" = u_muij ,
+        "gamma" = u_gamma )
 
   } , C = {
 
@@ -512,9 +382,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
 
-    # calculate variance of psi
-    psi_var <- survey::svyrecvar( ww * u_psi , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
     ### rhoRR
 
     # Calculate scores for estimating the variance of rhoRR parameters
@@ -532,10 +399,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_rhoRR by the jacobian
     u_rhoRR <- sweep( u_rhoRR , 2 , jrhoRR , "/" )
 
-    # calculate variance of rhoRR
-    rhoRR_var <- survey::svyrecvar( sweep( u_rhoRR , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    rhoRR_var <- diag( rhoRR_var )
-
     ### rhoMM
 
     # Calculate scores for estimating the variance of rhoMM parameters
@@ -550,16 +413,12 @@ ipf_variance <- function( xx , ww , res , design ) {
     jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
       jrhoMM[i] <-
-         bigM * eta[i]^2 / sum( rhoni )^2 -
+        bigM * eta[i]^2 / sum( rhoni )^2 -
         sum( bigCj * nipij[i,]^2 / colSums( rhocnipij )^2 )
     }
 
     # divide u_rhoMM by the jacobian
     u_rhoMM <- sweep( u_rhoMM , 2 , jrhoMM , "/" )
-
-    # calculate variance of rhoMM
-    rhoMM_var <- survey::svyrecvar( sweep( u_rhoMM , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    rhoMM_var <- diag( rhoMM_var )
 
     ### eta
 
@@ -586,10 +445,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_eta by the jacobian
     u_eta <- sweep( u_eta , 2 , jeta , "/" )
 
-    # calculate variance of eta
-    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    eta_var <- diag( eta_var )
-
     ### pij
 
     # Calculate scores for estimating the variance of pij parameters
@@ -614,18 +469,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_pij by the jacobian
     u_pij <- sweep( u_pij , 2:3 , jpij , "/" )
 
-    # create matrix of linearized variables
-    lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_pij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of u_pij sum
-    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### muij
 
     # calculate variance
@@ -634,50 +477,25 @@ ipf_variance <- function( xx , ww , res , design ) {
       u_muij[,i,j] <- nipij[i,j] + N * ( pij[i,j] * u_eta[,i] + eta[i] * u_pij[,i,j] )
     }
 
-    # create matrix of linearized variables
-    lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_muij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of muij
-    muij_var <- survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    des_vcov <- muij_var # full variance-covariance matrix
-    muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
+    # gamma
 
     # calculate linearized variables
     u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
       rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
     } )
 
-    # calculate variance of gamma
-    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    gamma_var <- diag( gamma_var )
-
-    ### 1st rao-scott correction
-
-    # calculate variance under SRS with replacement
-    # for Kish DEff
-    nobs <- sum( ww > 0 )
-    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
-    srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### combine results
 
-    # return final estimates
-    resvar <-
+    # return linearized variables
+    reslin <-
       list(
-        "psi" = psi_var ,
-        "rhoRR" = rhoRR_var ,
-        "rhoMM" = rhoMM_var ,
-        "eta" = eta_var ,
-        "pij" = pij_var ,
-        "muij" = muij_var ,
-        "gamma" = gamma_var ,
-        "vcov_full" = des_vcov ,
-        "vcov_srs"  = srs_vcov )
+        "psi" = u_psi ,
+        "rhoRR" = u_rhoRR ,
+        "rhoMM" = u_rhoMM ,
+        "eta" = u_eta ,
+        "pij" = u_pij ,
+        "muij" = u_muij ,
+        "gamma" = u_gamma )
 
   } ,
   D = {
@@ -705,9 +523,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
 
-    # calculate variance of psi
-    psi_var <- survey::svyrecvar( ww * u_psi , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-
     ### rhoRR
 
     # Calculate scores for estimating the variance of rhoRR parameters
@@ -729,10 +544,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_rhoRR by the jacobian
     u_rhoRR <- sweep( u_rhoRR , 2 , jrhoRR , "/" )
 
-    # calculate variance of rhoRR
-    rhoRR_var <- survey::svyrecvar( sweep( u_rhoRR , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    rhoRR_var <- diag( rhoRR_var )
-
     ### rhoMM
 
     # Calculate scores for estimating the variance of rhoMM parameters
@@ -747,15 +558,11 @@ ipf_variance <- function( xx , ww , res , design ) {
     jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
       jrhoMM[j] <-
-         - bigCj[j] / ( 1 - rhoMM[j] )^2 - bigM * sum( nipij[,j] )^2 / sum( rhoMMnipij )^2
+        - bigCj[j] / ( 1 - rhoMM[j] )^2 - bigM * sum( nipij[,j] )^2 / sum( rhoMMnipij )^2
     }
 
     # divide u_rhoMM by the jacobian
     u_rhoMM <- sweep( u_rhoMM , 2 , jrhoMM , "/" )
-
-    # calculate variance of rhoMM
-    rhoMM_var <- survey::svyrecvar( sweep( u_rhoMM , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    rhoMM_var <- diag( rhoMM_var )
 
     ### eta
 
@@ -782,10 +589,6 @@ ipf_variance <- function( xx , ww , res , design ) {
     # divide u_eta by the jacobian
     u_eta <- sweep( u_eta , 2 , jeta , "/" )
 
-    # calculate variance of eta
-    eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    eta_var <- diag( eta_var )
-
     ### pij
 
     # Calculate scores for estimating the variance of pij parameters
@@ -805,81 +608,143 @@ ipf_variance <- function( xx , ww , res , design ) {
         - bigNij[i,j] / pij[i,j]^2 -
         bigRi[i] * ( 1 - rhoRR[j] )^2 / rowSums( rhoRRcpij )[i]^2 -
         bigCj[j] * eta[i]^2 / colSums( nipij )[j]^2
-        bigM * ( rhoMM[j] * eta[i] )^2 / sum( rhoMMnipij )^2
+      bigM * ( rhoMM[j] * eta[i] )^2 / sum( rhoMMnipij )^2
     }
 
     # divide u_pij by the jacobian
     u_pij <- sweep( u_pij , 2:3 , jpij , "/" )
 
-    # create matrix of linearized variables
-    lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
-
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_pij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of u_pij sum
-    pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
-    pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### muij
 
-    # calculate variance
+    # calculate linearized variable
     u_muij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
     for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
       u_muij[,i,j] <- nipij[i,j] + N * ( pij[i,j] * u_eta[,i] + eta[i] * u_pij[,i,j] )
     }
 
-    # create matrix of linearized variables
-    lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
+    ### gamma
 
-    # adjust for structural zeros in transition matrix
-    if ( !is.null( pij.zero ) ) {
-      lin_muij[ , c( t( pij.zero ) ) ] <- 0
-    }
-
-    # calculate variance of muij
-    muij_var <- survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    des_vcov <- muij_var # full variance-covariance matrix
-    muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
-    # calculate linearized variables
+    # calculate linearized variable
     u_gamma <- sapply( seq_len( ncol( pij ) ) , function(j) {
       rowSums( sweep( u_pij[,,j] , 2 , eta , "*" ) + sweep( u_eta , 2 , pij[,j] , "*" ) )
     } )
 
-    # calculate variance of gamma
-    gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    gamma_var <- diag( gamma_var )
-
-    ### 1st rao-scott correction
-
-    # calculate variance under SRS with replacement
-    # for Kish DEff
-    nobs <- sum( ww > 0 )
-    srs_vcov <- survey::svyvar( ( ww > 0 ) * lin_muij , design, na.rm = TRUE ) * sum( ww )^2 / nobs
-    srs_vcov <- matrix( diag( srs_vcov ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
-
     ### combine results
 
-    # return final estimates
-    resvar <-
+    # return linearized variables
+    reslin <-
       list(
-        "psi" = psi_var ,
-        "rhoRR" = rhoRR_var ,
-        "rhoMM" = rhoMM_var ,
-        "eta" = eta_var ,
-        "pij" = pij_var ,
-        "muij" = muij_var ,
-        "gamma" = gamma_var ,
-        "vcov_full" = des_vcov ,
-        "vcov_srs"  = srs_vcov )
+        "psi" = u_psi ,
+        "rhoRR" = u_rhoRR ,
+        "rhoMM" = u_rhoMM ,
+        "eta" = u_eta ,
+        "pij" = u_pij ,
+        "muij" = u_muij ,
+        "gamma" = u_gamma )
 
   } )
 
-  # calculate 1st rao-scott correction
+  ### calculate variances
+
+  # response/nonresponse probabilities
+  if ( rp.variance & res$model != "MCAR" ) {
+
+    ### psi
+
+    # calculate variance of psi
+    psi_var <- survey::svyrecvar( sweep( as.matrix( u_psi ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    # psi_var <- diag( psi_var )
+
+    ### rhoRR
+
+    # calculate variance of rhoRR
+    rhoRR_var <- survey::svyrecvar( sweep( as.matrix( u_rhoRR ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    # rhoRR_var <- diag( rhoRR_var )
+
+    ### rhoMM
+
+    # calculate variance of rhoMM
+    rhoMM_var <- survey::svyrecvar( sweep( as.matrix( u_rhoMM ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    # rhoMM_var <- diag( rhoMM_var )
+
+  } else {
+
+    psi_var <- as.matrix( NA , length(psi))
+    rhoRR_var <- as.matrix( NA , length(rhoRR))
+    rhoMM_var <- as.matrix( NA , length(rhoMM))
+
+  }
+
+  ### eta
+
+  # calculate variance of eta
+  eta_var <- survey::svyrecvar( sweep( u_eta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  # eta_var <- diag( eta_var )
+
+  ### pij
+
+  # create matrix of linearized variables
+  lin_pij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_pij[,z,] ) )
+
+  # adjust for structural zeros in transition matrix
+  if ( !is.null( pij.zero ) ) {
+    lin_pij[ , c( t( pij.zero ) ) ] <- 0
+  }
+
+  # calculate variance of u_pij sum
+  pij_var <- diag( survey::svyrecvar( ww * lin_pij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+  pij_var <- matrix( pij_var , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
+
+  ### muij
+
+  # create matrix of linearized variables
+  lin_muij <- do.call( cbind , lapply( seq_len(ncol( bigNij)) , function( z ) u_muij[,z,] ) )
+
+  # adjust for structural zeros in transition matrix
+  if ( !is.null( pij.zero ) ) {
+    lin_muij[ , c( t( pij.zero ) ) ] <- 0
+  }
+
+  # calculate variance of muij
+  muij_var <- survey::svyrecvar( ww * lin_muij , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  muij_var <- matrix( diag( muij_var ) , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) , byrow = TRUE )
+
+  ### gamma
+
+  # calculate variance of gamma
+  gamma_var <- survey::svyrecvar( sweep( u_gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  # gamma_var <- diag( gamma_var )
+
+  ### net flow
+
+  # variance
+  u_delta <- sweep( N * ( u_gamma - u_eta ) , 2 , res[["gamma"]] - res[["eta"]] , "-" )
+  delta_var <- survey::svyrecvar( sweep( u_delta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+
+  ### combine variance estimates
+  mvar <-
+    list(
+      "psi" = psi_var ,
+      "rhoRR" = rhoRR_var ,
+      "rhoMM" = rhoMM_var ,
+      "eta" = eta_var ,
+      "pij" = pij_var ,
+      "muij" = muij_var ,
+      "gamma" = gamma_var ,
+      "delta" = delta_var )
+
+  ### calculate rao-scott correction
+
   if ( res$model != "MCAR" ) {
+
+    # # calculate linearized variable
+    # Amat <- if (length(psi ) > 1) sweep( sweep( pij , 1 , eta , "*" ) , 1 , psi , "*" ) else sweep( pij , 1 , eta , "*" ) * psi
+    # Bmat <- sweep( sweep( pij , 1 , eta , "*" ) , ifelse( res$model == "D" , 2 , 1 ) , rhoRR  , "*" )
+
+
+    # uncorrected
+    pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
+    pearson$data.name <- "estimated proportions"
 
     # # F-Distribution        # not working
     # # DeltaMat <- Matrix::solve( mvar$vcov_full ) %*% mvar$vcov_srs
@@ -893,16 +758,16 @@ ipf_variance <- function( xx , ww , res , design ) {
     # pearson$method <- "Pearson's X^2: 2nd Rao & Scott adjustment"
     # pearson$data.name <- "estimated counts"
 
-    # Chi-2 Distribution
-    DeltaMat <- Matrix::solve( mvar$muij ) %*% mvar$vcov_srs
-    pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
-    pearson$statistic <- pearson$statistic / sum( diag( DeltaMat ) )
-    pearson$p.value <- pchisq( pearson$statistic / mean( diag( DeltaMat ) ), df = NCOL( DeltaMat ) , lower.tail = FALSE)
-    pearson$parameter <- c(df = NCOL(DeltaMat))
-    pearson$method <- "Pearson's X^2: 1st Rao & Scott adjustment"
-    pearson$data.name <- "estimated counts"
-
+    # # Chi-2 Distribution
+    # pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
+    # DeltaMat <-  Matrix::solve( mvar$muij ) %*% mvar$vcov_srs
+    # pearson$statistic <- pearson$statistic / sum( diag( DeltaMat ) )
+    # pearson$p.value <- pchisq( pearson$statistic / mean( diag( DeltaMat ) ), df = NCOL( DeltaMat ) , lower.tail = FALSE )
+    # pearson$parameter <- c(df = NCOL(DeltaMat))
+    # pearson$method <- "Pearson's X^2: 1st Rao & Scott adjustment"
+    # pearson$data.name <- "estimated counts"
   }
+
 
   # add results
   mvar[["adj.chisq"]] <- if ( res$model == "MCAR" ) NULL else pearson

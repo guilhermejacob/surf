@@ -86,6 +86,7 @@ colnames( df1 )[1] <- "y"
 
 # create subset variable
 df0$v1 <- rbinom( n , 1 , .5 ) + 1
+df1$v1 <- df0$v1
 
 # build survey design object
 flowdes_srs <-

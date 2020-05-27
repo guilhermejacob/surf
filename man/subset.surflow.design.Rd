@@ -4,35 +4,36 @@
 \alias{subset.surflow.design}
 \title{Subset of surflow}
 \usage{
-\method{subset}{surflow.design}(x, subset, rounds = 0, on.full.design = FALSE, ...)
+\method{subset}{surflow.design}(x, subset, rounds = NULL, ..., on.full.design = FALSE)
 }
 \arguments{
 \item{x}{a surflow design object}
 
 \item{subset}{An expression specifying the subpopulation}
 
-\item{rounds}{a vector of integers indicating which round to apply subsetting condition. Defaults to \code{rounds = 0}, and the expression is applied to the first round.}
-
-\item{on.full.design}{A logical, indicating wether the subset should be applied to full design weights. Only meaningful for endogenous categories.}
+\item{rounds}{a vector of integers indicating which round to apply subsetting condition.
+Defaults to \code{rounds = NULL}, and the expression is applied to all rounds, keeping observation that were true in at least of the rounds.}
 
 \item{...}{future expansion}
+
+\item{on.full.design}{A logical, indicating wether the subset should be applied to full design weights. Only meaningful for endogenous categories.}
 }
 \description{
 Restrict a survey flow design to a subpopulation, keeping the original survey flow design information about number of clusters, strata.
 }
 \examples{
 # load data
-data( "artificial" )
+data( "real" )
 
 # create surflow design object
 flowdes <-
   sfydesign( ids = ~ upa ,
-             probs = ~ longprob ,
+             probs = ~ v1027 ,
              strata = ~ estrato ,
-             data = list( dfr0 , dfr1 ) ,
+             data = list( pnadc1 , pnadc2 ) ,
              nest = TRUE )
 
 # subset
-flowdes <- subset( flowdes , v2007 == 1 )
+flowdes <- subset( flowdes , v2009 >= 14 )
 
 }

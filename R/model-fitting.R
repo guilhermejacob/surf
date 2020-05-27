@@ -9,6 +9,14 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
   bigNij <- as.matrix( bigNij[ -nrow( bigNij ) , -ncol( bigNij ) ] )
   N  <- sum( bigNij ) + sum( bigRi ) + sum( bigCj ) + bigM
 
+  # fix zero probabilities
+  if ( bigM == 0 & model == "D" ) {
+    warning( "Model D is undefined for tables without nonresponse in both times. Switching to Model C." )
+    model <- "C"
+  }
+  if ( bigM == 0 & model != "D" ) bigM <- 1
+  if ( any( bigCj == 0 ) ) bigCj[ bigCj == 0 ] <- 1
+
   # test if margins are not zero
   if ( any( rowSums( bigNij ) == 0 , colSums( bigNij ) == 0 ) ) stop( "a line or column total is equal to zero. consider removing the category." )
 
@@ -38,10 +46,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = eta ,
         "pij" = pij ,
         "muij" = N * sweep( pij , 1 , eta , "*" ) ,
-        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
+        "gamma" = colSums( sweep( pij , 1 , eta , "*" ) ) ,
         "pij.zero" = pij.zero )
-    # return list of results
-    return( res )
 
   } , A = {
     # Obtain maximum pseudo-likelihood estimates for response model parameters
@@ -384,6 +390,15 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
 
   } )
 
+  # verbose treat
+  if (verbose) cat( "\n\n" )
+
+  ### net flows
+  mfit[["delta"]] <- N * ( mfit$gamma - mfit$eta )
+
+  # return mcar
+  if ( model == "MCAR" ) return( mfit )
+
   ### unadjusted chi-distances
   observed.props  <- cbind( rbind( mfit$bigNij , mfit$bigRi ) , c( mfit$bigCj , mfit$bigM ) ) / mfit$N
   estimated.Nij   <- sweep( mfit$pij , 1 , mfit$rhoRR * mfit$psi * mfit$eta , "*" )
@@ -410,11 +425,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
   # store unadjusted chi-square test score
   mfit[["unadj.chisq"]] <- chiscore
 
-  # verbose treat
-  if (verbose) cat( "\n\n" )
-
   # return fit
-  mfit
+  return( mfit )
 
 }
 

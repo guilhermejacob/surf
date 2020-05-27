@@ -1,27 +1,27 @@
 #' @title Real Datasets
 #'
-#' @description Amazonas state subset of the Brazilian Continous Household Survey,
-#' containing data from paired observations in the 1st and 2nd quarters of 2018.
+#' @description North region subset of the Brazilian Continous Household Survey,
+#' containing data from paired observations in the 1st and 2nd quarters of 2012.
 #'
-#' @aliases dfr0 dfr1 real
+#' @aliases pnadc1 pnadc2 real
 #'
 #' @docType data
 #'
 #' @usage data("real")
 #'
-#' @format Two objects of class \code{data.frame}: \code{dfr0, dfr0}
+#' @format Two objects of class \code{data.frame}: \code{pnadc1, pnadc2}
 #'
-#' @seealso \code{\link{df0}} for artificial data from a pseudo-population.
+#' @seealso \code{\link{df2}} for artificial data from a pseudo-population.
 #'
 #' @keywords real
-"dfr0"
+"pnadc1"
 
 #' @title Artificial datasets
 #'
 #' @description Artificial paired datasets, obtained using a SRSWOR from a pseudo-population of 100 000 individuals.
 #' @docType data
 #'
-#' @aliases df0 df1 artificial
+#' @aliases df1 df2 artificial
 #'
 #' @usage data("artificial")
 #'
@@ -35,11 +35,11 @@
 #'        \tab 3    \tab  .005     \tab .005     \tab .040     \cr
 #' }
 #'
-#' The \code{df0} contains the inclusion probabilities in the \code{prob} column.
+#' The \code{df1} contains the inclusion probabilities in the \code{prob} column.
 #'
-#' @format Two objects of class \code{data.frame}: \code{df0, df1}.
+#' @format Two objects of class \code{data.frame}: \code{df1, df2}.
 #'
-#' @seealso \code{\link{dfr0}} for real data from a Brazilian survey.
+#' @seealso \code{\link{pnadc1}} for real data from a Brazilian survey.
 #'
 #' @keywords artificial
-"df0"
+"df1"

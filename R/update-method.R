@@ -14,7 +14,7 @@
 #' flowdes <-
 #' sfydesign( ids = ~ 1 ,
 #'                probs = ~ prob ,
-#'                data = list( df0 , df1 ) ,
+#'                data = list( df1 , df2 ) ,
 #'                nest = TRUE )
 #'
 #' # update
@@ -32,19 +32,15 @@
 update.surflow.design <-
   function ( object, ... , rounds = NULL ) {
 
-    if ( is.null( rounds ) ) rounds <- seq_along( object$variables ) - 1
-
+    if ( is.null( rounds ) ) rounds <- seq_along( object$variables )
     if ( is.numeric( rounds ) ) {
-
       rounds <- unique( as.integer( rounds) )
-      if ( !all( rounds %in% c( seq_along( object$variables ) - 1 ) ) ) stop( "invalid index; check ?update.surflow.design for examples.")
+      if ( !all( rounds %in% seq_along( object$variables ) ) ) stop( "invalid index; check ?update.surflow.design for examples.")
 
+      dots <- substitute(list(...))[-1]
+      newnames <- names(dots)
       for (z in rounds ) {
-
-        dots <- substitute(list(...))[-1]
-        newnames <- names(dots)
-        for (j in seq(along = dots)) { object$variables[[z+1]][, newnames[j]] <- eval(dots[[j]], object$variables[[z+1]] , parent.frame()) }
-
+        for (j in seq(along = dots)) { object$variables[[z]][, newnames[j]] <- eval(dots[[j]], object$variables[[z]] , parent.frame()) }
       }
     } else stop( "invalid index; check ?update.surflow.design for examples.")
 

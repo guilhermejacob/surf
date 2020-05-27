@@ -7,7 +7,7 @@
 #' @param design  surflow.design object
 #' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param model  model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
-#' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{tol = 1e-6}.
+#' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
 #' @param pij.zero  A logical matrix defining structural zeroes in transition matrix. Defaults to \code{pij.zero = NULL}.
 #' @param ...  future expansion.
@@ -50,7 +50,7 @@
 #' flowdes <-
 #'   sfydesign( ids = ~0 ,
 #'                  probs = ~ prob ,
-#'                  data = list( df0 , df1 ) ,
+#'                  data = list( df1 , df2 ) ,
 #'                  nest = TRUE )
 #'
 #' # flow estimates
@@ -61,14 +61,14 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) , tol = 1e-6 , verbose = FALSE , pij.zero = NULL , ... ){
+svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(1,2) , tol = 1e-4 , verbose = FALSE , pij.zero = NULL , ... ){
 
   # test values
-  model <- match.arg( model , c("A","B","C","D", "MCAR" ) , several.ok = FALSE )
-  if ( !all( rounds %in% c(0, seq_along( design$variables ) ) ) ) stop( "rounds not in range." )
+  model <- match.arg( model , c("A","B","C","D","MCAR") , several.ok = FALSE )
+  if ( !all( rounds %in% seq_along( design$variables ) ) ) stop( "rounds not in range." )
 
   # Collect sample data and put in single data frame
-  xx <- lapply( design$variables[ rounds + 1 ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
+  xx <- lapply( design$variables[ rounds ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
   xx <- do.call( cbind , xx )
 
   # Test column format
@@ -85,33 +85,23 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) ,
   has.order <- ifelse( all( sapply( xx , is.ordered ) ) , TRUE , FALSE )
 
   # Revise names of columns on sample response data set
-  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) - 1 , ":" , colnames( xx ) )
+  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
 
   # Collect weights
   ww <-  stats::weights( design )
 
   # if no missing, use simple contingency table
-  if ( !any( is.na( xx[ ww > 0 ,] ) ) ) {
+  if ( !any( is.na( xx[ ww > 0 ,] ) ) ) model <- "MCAR"
 
-    # model fitting
-    mfit <- ipf( xx , ww , model = "MCAR" , tol = tol , verbose = verbose , pij.zero = pij.zero )
+  # model fitting
+  mfit <- ipf( xx , ww , model = model , tol = tol , verbose = verbose , pij.zero = pij.zero )
 
-    # variance estimation
-    mvar <- ipf_variance( xx , ww , res = mfit , design = design )
-
-  } else {
-
-    # model fitting
-    mfit <- ipf( xx , ww , model = model , tol = tol , verbose = verbose , pij.zero = pij.zero )
-
-    # variance estimation
-    mvar <- ipf_variance( xx , ww , res = mfit , design = design )
-
-  }
+  # variance estimation
+  mvar <- ipf_variance( xx , ww , res = mfit , design = design , rp.variance = TRUE )
 
   # build results list
-  res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" , "gamma" ) , function(z) {
-    if ( z %in% c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" ) ) {
+  res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
+    if ( z %in% c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" , "delta" ) ) {
       this_stats <- mfit[[z]]
       attr( this_stats , "var" ) <- mvar[[z]]
       names( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
@@ -128,7 +118,7 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(0,1) ,
   } , simplify = FALSE )
 
   # create final object
-  rval <- res[ c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" , "pij" , "muij" ) ]
+  rval <- res[ c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
   rval$model <- mfit$model
   class(rval) <- "flowstat"
   attr( rval , "rounds" )    <- rounds
