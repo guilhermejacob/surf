@@ -16,8 +16,8 @@ muij_pop <- N * sweep( pij_pop , 1 , eta_pop , "*" )
 
 # parameters for non-reponse mechanism
 psi_pop <- .80
-rhoRR_pop <- c( .80 , .50 , .50 )
-rhoMM_pop <- c( .90 , .60 , .60 )
+tau_pop <- c( .80 , .50 , .50 )
+tau_pop <- c( .90 , .60 , .60 )
 
 # classification labels matrix
 class_table <- expand.grid( data.frame( v0 = seq_len( nrow(pij_pop) ) , v1 = seq_len( nrow(pij_pop) ) ) )
@@ -59,14 +59,14 @@ pop_nonrespose[ as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - psi_pop )
 for ( i in seq_along( levels( pop_fullresponse$v0 ) ) ) {
   pop_nonrespose[ pop_fullresponse$v0 == levels( pop_fullresponse$v0 )[i] &
                     !is.na( pop_nonrespose$v0 ) &
-                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - rhoRR_pop[i] ) ) , "v1" ] <- NA
+                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - tau_pop[i] ) ) , "v1" ] <- NA
 }
 
 # adds non-response transition in time t
 for ( i in seq_along( levels( pop_fullresponse$v0 ) ) ) {
   pop_nonrespose[ pop_fullresponse$v0 == levels( pop_fullresponse$v0 )[i] &
                     is.na( pop_nonrespose$v0 ) &
-                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , rhoMM_pop[i] ) ) , "v1" ] <- NA
+                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , tau_pop[i] ) ) , "v1" ] <- NA
 }
 
 ### SELECT SAMPLE
@@ -108,14 +108,14 @@ test_that("outputs",{
   # expect_is( flow_srs_rep , "flowstat" )
 
   expect_is( flow_srs_lin$psi , "svystat" )
-  expect_is( flow_srs_lin$rhoRR , "svystat" )
-  expect_is( flow_srs_lin$rhoMM , "svystat" )
+  expect_is( flow_srs_lin$rho , "svystat" )
+  expect_is( flow_srs_lin$ta , "svystat" )
   expect_is( flow_srs_lin$eta , "svystat" )
   expect_is( flow_srs_lin$pij , "svymstat" )
   expect_is( flow_srs_lin$muij , "svymstat" )
   # expect_is( flow_srs_rep$psi , "svystat" )
-  # expect_is( flow_srs_rep$rhoRR , "svystat" )
-  # expect_is( flow_srs_rep$rhoMM , "svystat" )
+  # expect_is( flow_srs_rep$tau , "svystat" )
+  # expect_is( flow_srs_rep$tau , "svystat" )
   # expect_is( flow_srs_rep$eta , "svystat" )
   # expect_is( flow_srs_rep$pij , "svymstat" )
   # expect_is( flow_srs_rep$muij , "svymstat" )

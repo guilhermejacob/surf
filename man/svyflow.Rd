@@ -14,7 +14,6 @@
   tol = 1e-04,
   verbose = FALSE,
   pij.zero = NULL,
-  variance = FALSE,
   ...
 )
 

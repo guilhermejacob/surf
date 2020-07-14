@@ -16,8 +16,8 @@ muij_pop <- N * sweep( pij_pop , 1 , eta_pop , "*" )
 
 # parameters for non-reponse mechanism
 psi_pop <- .80
-rhoRR_pop <- c( .80 , .75 , .65 )
-rhoMM_pop <- c( .90 , .70 , .60 )
+rho_pop <- c( .80 , .75 , .65 )
+tau_pop <- c( .90 , .70 , .60 )
 
 # classification labels matrix
 class_table <- expand.grid( data.frame( v0 = seq_len( nrow(pij_pop) ) , v1 = seq_len( nrow(pij_pop) ) ) )
@@ -59,14 +59,14 @@ pop_nonrespose[ as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - psi_pop )
 for ( i in seq_along( levels( pop_fullresponse$v0 ) ) ) {
   pop_nonrespose[ pop_fullresponse$v0 == levels( pop_fullresponse$v0 )[i] &
                     !is.na( pop_nonrespose$v0 ) &
-                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - rhoRR_pop[i] ) ) , "v1" ] <- NA
+                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - rho_pop[i] ) ) , "v1" ] <- NA
 }
 
 # adds non-response transition in time t
 for ( i in seq_along( levels( pop_fullresponse$v0 ) ) ) {
   pop_nonrespose[ pop_fullresponse$v0 == levels( pop_fullresponse$v0 )[i] &
                     is.na( pop_nonrespose$v0 ) &
-                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , rhoMM_pop[i] ) ) , "v1" ] <- NA
+                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , tau_pop[i] ) ) , "v1" ] <- NA
 }
 
 ### SELECT SAMPLE
@@ -114,78 +114,78 @@ test_that( "extraction of estimates" , {
 
   # point estimates
   expect_identical( coef( flow_lin_sub1$psi ) , surf:::coef.svymstat( flow_lin_sub1$psi ) )
-  expect_identical( coef( flow_lin_sub1$rhoRR ) , surf:::coef.svymstat( flow_lin_sub1$rhoRR ) )
-  expect_identical( coef( flow_lin_sub1$rhoMM ) , surf:::coef.svymstat( flow_lin_sub1$rhoMM ) )
+  expect_identical( coef( flow_lin_sub1$rho ) , surf:::coef.svymstat( flow_lin_sub1$rho ) )
+  expect_identical( coef( flow_lin_sub1$tau ) , surf:::coef.svymstat( flow_lin_sub1$tau ) )
   expect_identical( coef( flow_lin_sub1$eta ) , surf:::coef.svymstat( flow_lin_sub1$eta ) )
   expect_identical( coef( flow_lin_sub1$muij ) , surf:::coef.svymstat( flow_lin_sub1$muij ) )
   expect_identical( coef( flow_lin_sub1$pij ) , surf:::coef.svymstat( flow_lin_sub1$pij ) )
   expect_identical( coef( flow_lin_sub2$psi ) , surf:::coef.svymstat( flow_lin_sub2$psi ) )
-  expect_identical( coef( flow_lin_sub2$rhoRR ) , surf:::coef.svymstat( flow_lin_sub2$rhoRR ) )
-  expect_identical( coef( flow_lin_sub2$rhoMM ) , surf:::coef.svymstat( flow_lin_sub2$rhoMM ) )
+  expect_identical( coef( flow_lin_sub2$rho ) , surf:::coef.svymstat( flow_lin_sub2$rho ) )
+  expect_identical( coef( flow_lin_sub2$tau ) , surf:::coef.svymstat( flow_lin_sub2$tau ) )
   expect_identical( coef( flow_lin_sub2$eta ) , surf:::coef.svymstat( flow_lin_sub2$eta ) )
   expect_identical( coef( flow_lin_sub2$muij ) , surf:::coef.svymstat( flow_lin_sub2$muij ) )
   expect_identical( coef( flow_lin_sub2$pij ) , surf:::coef.svymstat( flow_lin_sub2$pij ) )
   # expect_identical( coef( flow_rep_sub1$psi ) , surf:::coef.svymstat( flow_rep_sub1$psi ) )
-  # expect_identical( coef( flow_rep_sub1$rhoRR ) , surf:::coef.svymstat( flow_rep_sub1$rhoRR ) )
-  # expect_identical( coef( flow_rep_sub1$rhoMM ) , surf:::coef.svymstat( flow_rep_sub1$rhoMM ) )
+  # expect_identical( coef( flow_rep_sub1$rho ) , surf:::coef.svymstat( flow_rep_sub1$rho ) )
+  # expect_identical( coef( flow_rep_sub1$tau ) , surf:::coef.svymstat( flow_rep_sub1$tau ) )
   # expect_identical( coef( flow_rep_sub1$eta ) , surf:::coef.svymstat( flow_rep_sub1$eta ) )
   # expect_identical( coef( flow_rep_sub1$muij ) , surf:::coef.svymstat( flow_rep_sub1$muij ) )
   # expect_identical( coef( flow_rep_sub1$pij ) , surf:::coef.svymstat( flow_rep_sub1$pij ) )
   # expect_identical( coef( flow_rep_sub2$psi ) , surf:::coef.svymstat( flow_rep_sub2$psi ) )
-  # expect_identical( coef( flow_rep_sub2$rhoRR ) , surf:::coef.svymstat( flow_rep_sub2$rhoRR ) )
-  # expect_identical( coef( flow_rep_sub2$rhoMM ) , surf:::coef.svymstat( flow_rep_sub2$rhoMM ) )
+  # expect_identical( coef( flow_rep_sub2$rho ) , surf:::coef.svymstat( flow_rep_sub2$rho ) )
+  # expect_identical( coef( flow_rep_sub2$tau ) , surf:::coef.svymstat( flow_rep_sub2$tau ) )
   # expect_identical( coef( flow_rep_sub2$eta ) , surf:::coef.svymstat( flow_rep_sub2$eta ) )
   # expect_identical( coef( flow_rep_sub2$muij ) , surf:::coef.svymstat( flow_rep_sub2$muij ) )
   # expect_identical( coef( flow_rep_sub2$pij ) , surf:::coef.svymstat( flow_rep_sub2$pij ) )
 
   # variances
   expect_identical( vcov( flow_lin_sub1$psi ) , survey:::vcov.svystat( flow_lin_sub1$psi ) )
-  expect_identical( vcov( flow_lin_sub1$rhoRR ) , survey:::vcov.svystat( flow_lin_sub1$rhoRR ) )
-  expect_identical( vcov( flow_lin_sub1$rhoMM ) , survey:::vcov.svystat( flow_lin_sub1$rhoMM ) )
+  expect_identical( vcov( flow_lin_sub1$rho ) , survey:::vcov.svystat( flow_lin_sub1$rho ) )
+  expect_identical( vcov( flow_lin_sub1$tau ) , survey:::vcov.svystat( flow_lin_sub1$tau ) )
   expect_identical( vcov( flow_lin_sub1$eta ) , survey:::vcov.svystat( flow_lin_sub1$eta ) )
   expect_identical( vcov( flow_lin_sub1$muij ) , surf:::vcov.svymstat( flow_lin_sub1$muij ) )
   expect_identical( vcov( flow_lin_sub1$pij ) , surf:::vcov.svymstat( flow_lin_sub1$pij ) )
   expect_identical( vcov( flow_lin_sub2$psi ) , survey:::vcov.svystat( flow_lin_sub2$psi ) )
-  expect_identical( vcov( flow_lin_sub2$rhoRR ) , survey:::vcov.svystat( flow_lin_sub2$rhoRR ) )
-  expect_identical( vcov( flow_lin_sub2$rhoMM ) , survey:::vcov.svystat( flow_lin_sub2$rhoMM ) )
+  expect_identical( vcov( flow_lin_sub2$rho ) , survey:::vcov.svystat( flow_lin_sub2$rho ) )
+  expect_identical( vcov( flow_lin_sub2$tau ) , survey:::vcov.svystat( flow_lin_sub2$tau ) )
   expect_identical( vcov( flow_lin_sub2$eta ) , survey:::vcov.svystat( flow_lin_sub2$eta ) )
   expect_identical( vcov( flow_lin_sub2$muij ) , surf:::vcov.svymstat( flow_lin_sub2$muij ) )
   expect_identical( vcov( flow_lin_sub2$pij ) , surf:::vcov.svymstat( flow_lin_sub2$pij ) )
   # expect_identical( vcov( flow_rep_sub1$psi ) , survey:::vcov.svystat( flow_rep_sub1$psi ) )
-  # expect_identical( vcov( flow_rep_sub1$rhoRR ) , survey:::vcov.svystat( flow_rep_sub1$rhoRR ) )
-  # expect_identical( vcov( flow_rep_sub1$rhoMM ) , survey:::vcov.svystat( flow_rep_sub1$rhoMM ) )
+  # expect_identical( vcov( flow_rep_sub1$rho ) , survey:::vcov.svystat( flow_rep_sub1$rho ) )
+  # expect_identical( vcov( flow_rep_sub1$tau ) , survey:::vcov.svystat( flow_rep_sub1$tau ) )
   # expect_identical( vcov( flow_rep_sub1$eta ) , survey:::vcov.svystat( flow_rep_sub1$eta ) )
   # expect_identical( vcov( flow_rep_sub1$muij ) , surf:::vcov.svymstat( flow_rep_sub1$muij ) )
   # expect_identical( vcov( flow_rep_sub1$pij ) , surf:::vcov.svymstat( flow_rep_sub1$pij ) )
   # expect_identical( vcov( flow_rep_sub2$psi ) , survey:::vcov.svystat( flow_rep_sub2$psi ) )
-  # expect_identical( vcov( flow_rep_sub2$rhoRR ) , survey:::vcov.svystat( flow_rep_sub2$rhoRR ) )
-  # expect_identical( vcov( flow_rep_sub2$rhoMM ) , survey:::vcov.svystat( flow_rep_sub2$rhoMM ) )
+  # expect_identical( vcov( flow_rep_sub2$rho ) , survey:::vcov.svystat( flow_rep_sub2$rho ) )
+  # expect_identical( vcov( flow_rep_sub2$tau ) , survey:::vcov.svystat( flow_rep_sub2$tau ) )
   # expect_identical( vcov( flow_rep_sub2$eta ) , survey:::vcov.svystat( flow_rep_sub2$eta ) )
   # expect_identical( vcov( flow_rep_sub2$muij ) , surf:::vcov.svymstat( flow_rep_sub2$muij ) )
   # expect_identical( vcov( flow_rep_sub2$pij ) , surf:::vcov.svymstat( flow_rep_sub2$pij ) )
 
   # standard errors
   expect_identical( SE( flow_lin_sub1$psi ) , survey:::SE.svystat( flow_lin_sub1$psi ) )
-  expect_identical( SE( flow_lin_sub1$rhoRR ) , survey:::SE.svystat( flow_lin_sub1$rhoRR ) )
-  expect_identical( SE( flow_lin_sub1$rhoMM ) , survey:::SE.svystat( flow_lin_sub1$rhoMM ) )
+  expect_identical( SE( flow_lin_sub1$rho ) , survey:::SE.svystat( flow_lin_sub1$rho ) )
+  expect_identical( SE( flow_lin_sub1$tau ) , survey:::SE.svystat( flow_lin_sub1$tau ) )
   expect_identical( SE( flow_lin_sub1$eta ) , survey:::SE.svystat( flow_lin_sub1$eta ) )
   expect_identical( SE( flow_lin_sub1$muij ) , surf:::SE.svymstat( flow_lin_sub1$muij ) )
   expect_identical( SE( flow_lin_sub1$pij ) , surf:::SE.svymstat( flow_lin_sub1$pij ) )
   expect_identical( SE( flow_lin_sub2$psi ) , survey:::SE.svystat( flow_lin_sub2$psi ) )
-  expect_identical( SE( flow_lin_sub2$rhoRR ) , survey:::SE.svystat( flow_lin_sub2$rhoRR ) )
-  expect_identical( SE( flow_lin_sub2$rhoMM ) , survey:::SE.svystat( flow_lin_sub2$rhoMM ) )
+  expect_identical( SE( flow_lin_sub2$rho ) , survey:::SE.svystat( flow_lin_sub2$rho ) )
+  expect_identical( SE( flow_lin_sub2$tau ) , survey:::SE.svystat( flow_lin_sub2$tau ) )
   expect_identical( SE( flow_lin_sub2$eta ) , survey:::SE.svystat( flow_lin_sub2$eta ) )
   expect_identical( SE( flow_lin_sub2$muij ) , surf:::SE.svymstat( flow_lin_sub2$muij ) )
   expect_identical( SE( flow_lin_sub2$pij ) , surf:::SE.svymstat( flow_lin_sub2$pij ) )
   # expect_identical( SE( flow_rep_sub1$psi ) , survey:::SE.svystat( flow_rep_sub1$psi ) )
-  # expect_identical( SE( flow_rep_sub1$rhoRR ) , survey:::SE.svystat( flow_rep_sub1$rhoRR ) )
-  # expect_identical( SE( flow_rep_sub1$rhoMM ) , survey:::SE.svystat( flow_rep_sub1$rhoMM ) )
+  # expect_identical( SE( flow_rep_sub1$rho ) , survey:::SE.svystat( flow_rep_sub1$rho ) )
+  # expect_identical( SE( flow_rep_sub1$tau ) , survey:::SE.svystat( flow_rep_sub1$tau ) )
   # expect_identical( SE( flow_rep_sub1$eta ) , survey:::SE.svystat( flow_rep_sub1$eta ) )
   # expect_identical( SE( flow_rep_sub1$muij ) , surf:::SE.svymstat( flow_rep_sub1$muij ) )
   # expect_identical( SE( flow_rep_sub1$pij ) , surf:::SE.svymstat( flow_rep_sub1$pij ) )
   # expect_identical( SE( flow_rep_sub2$psi ) , survey:::SE.svystat( flow_rep_sub2$psi ) )
-  # expect_identical( SE( flow_rep_sub2$rhoRR ) , survey:::SE.svystat( flow_rep_sub2$rhoRR ) )
-  # expect_identical( SE( flow_rep_sub2$rhoMM ) , survey:::SE.svystat( flow_rep_sub2$rhoMM ) )
+  # expect_identical( SE( flow_rep_sub2$rho ) , survey:::SE.svystat( flow_rep_sub2$rho ) )
+  # expect_identical( SE( flow_rep_sub2$tau ) , survey:::SE.svystat( flow_rep_sub2$tau ) )
   # expect_identical( SE( flow_rep_sub2$eta ) , survey:::SE.svystat( flow_rep_sub2$eta ) )
   # expect_identical( SE( flow_rep_sub2$muij ) , surf:::SE.svymstat( flow_rep_sub2$muij ) )
   # expect_identical( SE( flow_rep_sub2$pij ) , surf:::SE.svymstat( flow_rep_sub2$pij ) )
@@ -197,10 +197,10 @@ test_that("compare point estimates vs population values",{
 
   expect_equivalent( coef( flow_lin_sub1$psi ) , psi_pop , tolerance = .50 )
   expect_equivalent( coef( flow_lin_sub2$psi ) , psi_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_lin_sub1$rhoRR ) , rhoRR_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_lin_sub2$rhoRR ) , rhoRR_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_lin_sub1$rhoMM ) , rhoMM_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_lin_sub2$rhoMM ) , rhoMM_pop , tolerance = .50 )
+  expect_equivalent( coef( flow_lin_sub1$rho ) , rho_pop , tolerance = .50 )
+  expect_equivalent( coef( flow_lin_sub2$rho ) , rho_pop , tolerance = .50 )
+  expect_equivalent( coef( flow_lin_sub1$tau ) , tau_pop , tolerance = .50 )
+  expect_equivalent( coef( flow_lin_sub2$tau ) , tau_pop , tolerance = .50 )
   expect_equivalent( coef( flow_lin_sub1$eta ) , eta_pop , tolerance = .10 )
   expect_equivalent( coef( flow_lin_sub2$eta ) , eta_pop , tolerance = .10 )
   expect_equivalent( coef( flow_lin_sub1$pij ) , pij_pop , tolerance = .10 )
@@ -214,15 +214,15 @@ test_that("compare point estimates vs population values",{
 # test_that("compare linearized vs replicate: point estimates",{
 #
 #   expect_identical( coef( flow_lin_sub1$psi ) , coef( flow_rep_sub1$psi ) )
-#   expect_identical( coef( flow_lin_sub1$rhoRR ) , coef( flow_rep_sub1$rhoRR ) )
-#   expect_identical( coef( flow_lin_sub1$rhoMM ) , coef( flow_rep_sub1$rhoMM ) )
+#   expect_identical( coef( flow_lin_sub1$rho ) , coef( flow_rep_sub1$rho ) )
+#   expect_identical( coef( flow_lin_sub1$tau ) , coef( flow_rep_sub1$tau ) )
 #   expect_identical( coef( flow_lin_sub1$eta ) , coef( flow_rep_sub1$eta ) )
 #   expect_identical( coef( flow_lin_sub1$pij ) , coef( flow_rep_sub1$pij ) )
 #   expect_identical( coef( flow_lin_sub1$muij ) , coef( flow_rep_sub1$muij ) )
 #
 #   expect_identical( coef( flow_lin_sub2$psi ) , coef( flow_rep_sub2$psi ) )
-#   expect_identical( coef( flow_lin_sub2$rhoRR ) , coef( flow_rep_sub2$rhoRR ) )
-#   expect_identical( coef( flow_lin_sub2$rhoMM ) , coef( flow_rep_sub2$rhoMM ) )
+#   expect_identical( coef( flow_lin_sub2$rho ) , coef( flow_rep_sub2$rho ) )
+#   expect_identical( coef( flow_lin_sub2$tau ) , coef( flow_rep_sub2$tau ) )
 #   expect_identical( coef( flow_lin_sub2$eta ) , coef( flow_rep_sub2$eta ) )
 #   expect_identical( coef( flow_lin_sub2$pij ) , coef( flow_rep_sub2$pij ) )
 #   expect_identical( coef( flow_lin_sub2$muij ) , coef( flow_rep_sub2$muij ) )
@@ -231,15 +231,15 @@ test_that("compare point estimates vs population values",{
 # test_that("compare linearized vs replicate: standard errors",{
 #
 #   expect_equivalent( SE( flow_lin_sub1$psi ) , SE( flow_rep_sub1$psi ) , tolerance = .1 )
-#   expect_equivalent( SE( flow_lin_sub1$rhoRR ) , SE( flow_rep_sub1$rhoRR ) , tolerance = .1 )
-#   expect_equivalent( SE( flow_lin_sub1$rhoMM ) , SE( flow_rep_sub1$rhoMM ) , tolerance = .1 )
+#   expect_equivalent( SE( flow_lin_sub1$rho ) , SE( flow_rep_sub1$rho ) , tolerance = .1 )
+#   expect_equivalent( SE( flow_lin_sub1$tau ) , SE( flow_rep_sub1$tau ) , tolerance = .1 )
 #   expect_equivalent( SE( flow_lin_sub1$eta ) , SE( flow_rep_sub1$eta ) , tolerance = .1 )
 #   expect_equivalent( SE( flow_lin_sub1$pij ) , SE( flow_rep_sub1$pij ) , tolerance = .1 )
 #   expect_equivalent( SE( flow_lin_sub1$muij ) , SE( flow_rep_sub1$muij ) , tolerance = .4 )
 #
 #   expect_equivalent( SE( flow_lin_sub2$psi ) , SE( flow_rep_sub2$psi ) , tolerance = .1 )
-#   expect_equivalent( SE( flow_lin_sub2$rhoRR ) , SE( flow_rep_sub2$rhoRR ) , tolerance = .1 )
-#   expect_equivalent( SE( flow_lin_sub2$rhoMM ) , SE( flow_rep_sub2$rhoMM ) , tolerance = .1 )
+#   expect_equivalent( SE( flow_lin_sub2$rho ) , SE( flow_rep_sub2$rho ) , tolerance = .1 )
+#   expect_equivalent( SE( flow_lin_sub2$tau ) , SE( flow_rep_sub2$tau ) , tolerance = .1 )
 #   expect_equivalent( SE( flow_lin_sub2$eta ) , SE( flow_rep_sub2$eta ) , tolerance = .1 )
 #   expect_equivalent( SE( flow_lin_sub2$pij ) , SE( flow_rep_sub2$pij ) , tolerance = .1 )
 #   expect_equivalent( SE( flow_lin_sub2$muij ) , SE( flow_rep_sub2$muij ) , tolerance = .4 )

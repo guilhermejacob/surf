@@ -10,13 +10,15 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
   bigCj <- res[["bigCj"]]
   bigM <- res[["bigM"]]
   psi <- res[["psi"]]
-  rhoRR <- res[["rhoRR"]]
-  rhoMM <- res[["rhoMM"]]
+  rho <- res[["rho"]]
+  tau <- res[["tau"]]
   eta <- res[["eta"]]
   pij <- res[["pij"]]
   muij <- res[["muij"]]
   pij.zero <- res[["pij.zero"]]
   N <- res[["N"]]
+  pearson <- res[["unadj.chisq"]]
+  ll <- res[["ll"]]
 
   # yy array - see Rojas et al. (2014, p.294)
   yy <- array( 0  , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( xx ) ) )
@@ -40,13 +42,13 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
 
     psi_var <- NA
 
-    ### rhoRR
+    ### rho
 
-    rhoRR_var <- NA
+    rho_var <- NA
 
-    ### rhoMM
+    ### tau
 
-    rhoMM_var <- NA
+    tau_var <- NA
 
     # aux stats
     nipij <- sweep( pij , 1 , eta , "*" )
@@ -106,8 +108,8 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     reslin <-
       list(
         "psi" = NA ,
-        "rhoRR" = NA ,
-        "rhoMM" = NA ,
+        "rho" = NA ,
+        "tau" = NA ,
         "eta" = u_eta ,
         "pij" = u_pij ,
         "muij" = u_muij ,
@@ -133,27 +135,27 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
 
-    ### rhoRR
+    ### rho
 
-    # Calculate scores for estimating the variance of rhoRR parameters
-    u_rhoRR <- rowSums( apply( y1y2 , 1:2 , sum ) ) / rhoRR - rowSums( yy[,,1] * ( 1 - zz[,2]) ) / ( 1 - rhoRR )
+    # Calculate scores for estimating the variance of rho parameters
+    u_rho <- rowSums( apply( y1y2 , 1:2 , sum ) ) / rho - rowSums( yy[,,1] * ( 1 - zz[,2]) ) / ( 1 - rho )
 
-    # Calculate jacobian for estimating the variance of rhoRR parameters
-    jrhoRR <- - sum( bigNij ) / rhoRR^2 - sum( bigRi ) / ( 1 - rhoRR )^2
+    # Calculate jacobian for estimating the variance of rho parameters
+    jrho <- - sum( bigNij ) / rho^2 - sum( bigRi ) / ( 1 - rho )^2
 
-    # divide u_rhoRR by the jacobian
-    u_rhoRR <- u_rhoRR / jrhoRR
+    # divide u_rho by the jacobian
+    u_rho <- u_rho / jrho
 
-    ### rhoMM
+    ### tau
 
-    # Calculate scores for estimating the variance of rhoMM parameters
-    u_rhoMM <- ( 1 - zz[,1] ) * ( 1 - zz[,2] ) / rhoMM - rowSums( yy[,,2] * ( 1 - zz[,1] ) ) / ( 1 - rhoMM )
+    # Calculate scores for estimating the variance of tau parameters
+    u_tau <- ( 1 - zz[,1] ) * ( 1 - zz[,2] ) / tau - rowSums( yy[,,2] * ( 1 - zz[,1] ) ) / ( 1 - tau )
 
-    # Calculate jacobian for estimating the variance of rhoMM parameters
-    jrhoMM <- - bigM / rhoMM^2 - sum( bigCj ) / ( 1 - rhoMM )^2
+    # Calculate jacobian for estimating the variance of tau parameters
+    jtau <- - bigM / tau^2 - sum( bigCj ) / ( 1 - tau )^2
 
-    # divide u_rhoMM by the jacobian
-    u_rhoMM <- u_rhoMM / jrhoMM
+    # divide u_tau by the jacobian
+    u_tau <- u_tau / jtau
 
     ### eta
 
@@ -218,8 +220,8 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     reslin <-
       list(
         "psi" = u_psi ,
-        "rhoRR" = u_rhoRR ,
-        "rhoMM" = u_rhoMM ,
+        "rho" = u_rho ,
+        "tau" = u_tau ,
         "eta" = u_eta ,
         "pij" = u_pij ,
         "muij" = u_muij ,
@@ -258,27 +260,27 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     # divide u_psi by the jacobian
     u_psi <- sweep( u_psi , 2 , jpsi , "/" )
 
-    ### rhoRR
+    ### rho
 
-    # Calculate scores for estimating the variance of rhoRR parameters
-    u_rhoRR <- rowSums( apply( y1y2 , 1:2 , sum ) ) / rhoRR - rowSums( yy[,,1] * ( 1 - zz[,2]) ) / ( 1 - rhoRR )
+    # Calculate scores for estimating the variance of rho parameters
+    u_rho <- rowSums( apply( y1y2 , 1:2 , sum ) ) / rho - rowSums( yy[,,1] * ( 1 - zz[,2]) ) / ( 1 - rho )
 
-    # Calculate jacobian for estimating the variance of rhoRR parameters
-    jrhoRR <- - sum( bigNij ) / rhoRR^2 - sum( bigRi ) / ( 1 - rhoRR )^2
+    # Calculate jacobian for estimating the variance of rho parameters
+    jrho <- - sum( bigNij ) / rho^2 - sum( bigRi ) / ( 1 - rho )^2
 
-    # divide u_rhoRR by the jacobian
-    u_rhoRR <- u_rhoRR / jrhoRR
+    # divide u_rho by the jacobian
+    u_rho <- u_rho / jrho
 
-    ### rhoMM
+    ### tau
 
-    # Calculate scores for estimating the variance of rhoMM parameters
-    u_rhoMM <- ( 1 - zz[,1] ) * ( 1 - zz[,2] ) / rhoMM - rowSums( yy[,,2] * ( 1 - zz[,1] ) ) / ( 1 - rhoMM )
+    # Calculate scores for estimating the variance of tau parameters
+    u_tau <- ( 1 - zz[,1] ) * ( 1 - zz[,2] ) / tau - rowSums( yy[,,2] * ( 1 - zz[,1] ) ) / ( 1 - tau )
 
-    # Calculate jacobian for estimating the variance of rhoMM parameters
-    jrhoMM <- - bigM / rhoMM^2 - sum( bigCj ) / ( 1 - rhoMM )^2
+    # Calculate jacobian for estimating the variance of tau parameters
+    jtau <- - bigM / tau^2 - sum( bigCj ) / ( 1 - tau )^2
 
-    # divide u_rhoMM by the jacobian
-    u_rhoMM <- u_rhoMM / jrhoMM
+    # divide u_tau by the jacobian
+    u_tau <- u_tau / jtau
 
     ### eta
 
@@ -350,8 +352,8 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     reslin <-
       list(
         "psi" = u_psi ,
-        "rhoRR" = u_rhoRR ,
-        "rhoMM" = u_rhoMM ,
+        "rho" = u_rho ,
+        "tau" = u_tau ,
         "eta" = u_eta ,
         "pij" = u_pij ,
         "muij" = u_muij ,
@@ -361,11 +363,11 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
 
     # calculate auxiliary stats
     nipij <- sweep( pij , 1 , eta , "*" )
-    rhoni <- rhoMM * eta
-    rhocni <- ( 1 - rhoMM ) * eta
+    rhoni <- tau * eta
+    rhocni <- ( 1 - tau ) * eta
     rhonipij <- sweep( pij , 1 , rhoni , "*" )
     rhocnipij <- sweep( pij , 1 , rhocni , "*" )
-    rhocpij <- sweep( pij , 1 , 1 - rhoMM , "*" )
+    rhocpij <- sweep( pij , 1 , 1 - tau , "*" )
 
     ### psi
 
@@ -382,43 +384,43 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
 
-    ### rhoRR
+    ### rho
 
-    # Calculate scores for estimating the variance of rhoRR parameters
-    u_rhoRR <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
+    # Calculate scores for estimating the variance of rho parameters
+    u_rho <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
-      u_rhoRR[,i] <- yy[,i,1] * rowSums( yy[,,2] ) / rhoRR[i] - yy[,i,1] * ( 1 - zz[,2] ) / ( 1 - rhoRR[i] )
+      u_rho[,i] <- yy[,i,1] * rowSums( yy[,,2] ) / rho[i] - yy[,i,1] * ( 1 - zz[,2] ) / ( 1 - rho[i] )
     }
 
-    # Calculate jacobian for estimating the variance of rhoRR parameters
-    jrhoRR <- vector( "numeric" , length = nrow( bigNij ) )
+    # Calculate jacobian for estimating the variance of rho parameters
+    jrho <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
-      jrhoRR[i] <- - sum( bigNij[i,] ) / rhoRR[i]^2 - bigRi[i] / ( 1 - rhoRR[i] )^2
+      jrho[i] <- - sum( bigNij[i,] ) / rho[i]^2 - bigRi[i] / ( 1 - rho[i] )^2
     }
 
-    # divide u_rhoRR by the jacobian
-    u_rhoRR <- sweep( u_rhoRR , 2 , jrhoRR , "/" )
+    # divide u_rho by the jacobian
+    u_rho <- sweep( u_rho , 2 , jrho , "/" )
 
-    ### rhoMM
+    ### tau
 
-    # Calculate scores for estimating the variance of rhoMM parameters
-    u_rhoMM <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
+    # Calculate scores for estimating the variance of tau parameters
+    u_tau <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
-      u_rhoMM[,i] <-
+      u_tau[,i] <-
         ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i] / sum( rhoni ) -
         rowSums( sweep( yy[,,2] * ( 1 - zz[,1] ) , 2 , nipij[i,] / colSums( rhocnipij ) , "*" ) )
     }
 
-    # Calculate jacobian for estimating the variance of rhoMM parameters
-    jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
+    # Calculate jacobian for estimating the variance of tau parameters
+    jtau <- vector( "numeric" , length = nrow( bigNij ) )
     for ( i in seq_len( nrow( bigNij ) ) ) {
-      jrhoMM[i] <-
+      jtau[i] <-
         bigM * eta[i]^2 / sum( rhoni )^2 -
         sum( bigCj * nipij[i,]^2 / colSums( rhocnipij )^2 )
     }
 
-    # divide u_rhoMM by the jacobian
-    u_rhoMM <- sweep( u_rhoMM , 2 , jrhoMM , "/" )
+    # divide u_tau by the jacobian
+    u_tau <- sweep( u_tau , 2 , jtau , "/" )
 
     ### eta
 
@@ -429,7 +431,7 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
         yy[,i,1] * rowSums( yy[,,2] ) / eta[i] +
         yy[,i,1] * ( 1 - zz[,2] ) / eta[i] +
         rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , rhocpij[i,] / colSums( rhocnipij ) , "*" ) ) +
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( rhoMM[i] / sum( rhoni ) ) - 1
+        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( tau[i] / sum( rhoni ) ) - 1
     }
 
     # Calculate jacobian for estimating the variance of eta parameters
@@ -439,7 +441,7 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
         - sum( bigNij[i,] ) / eta[i]^2 -
         bigRi[i] / eta[i]^2 -
         sum( bigCj * rhocpij[i,]^2 / colSums( rhocnipij )^2 ) -
-        bigM * rhoMM[i]^2 / sum( rhoni )^2
+        bigM * tau[i]^2 / sum( rhoni )^2
     }
 
     # divide u_eta by the jacobian
@@ -490,8 +492,8 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     reslin <-
       list(
         "psi" = u_psi ,
-        "rhoRR" = u_rhoRR ,
-        "rhoMM" = u_rhoMM ,
+        "rho" = u_rho ,
+        "tau" = u_tau ,
         "eta" = u_eta ,
         "pij" = u_pij ,
         "muij" = u_muij ,
@@ -502,11 +504,11 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
 
     # calculate auxiliary stats
     nipij <- sweep( pij , 1 , eta , "*" )
-    rhoRRpij <- sweep( pij , 2 , rhoRR , "*" )
-    rhoRRcpij <- sweep( pij , 2 , 1 - rhoRR , "*" )
-    rhoMMnipij <- sweep( nipij , 2 , rhoMM , "*" )
-    rhoMMpij <- sweep( pij , 2 , rhoMM , "*" )
-    rhoMMcpij <- sweep( 1 - pij , 2 , rhoMM , "*" )
+    rhopij <- sweep( pij , 2 , rho , "*" )
+    rhocpij <- sweep( pij , 2 , 1 - rho , "*" )
+    taunipij <- sweep( nipij , 2 , tau , "*" )
+    taupij <- sweep( pij , 2 , tau , "*" )
+    taucpij <- sweep( 1 - pij , 2 , tau , "*" )
 
     ### psi
 
@@ -523,46 +525,46 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
 
-    ### rhoRR
+    ### rho
 
-    # Calculate scores for estimating the variance of rhoRR parameters
-    u_rhoRR <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
+    # Calculate scores for estimating the variance of rho parameters
+    u_rho <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
-      u_rhoRR[,j] <-
-        yy[,j,2] * rowSums( yy[,,1] ) / rhoRR[j] -
-        rowSums( sweep( ( 1 - zz[,2] ) * yy[,,1] , 2 ,  pij[,j] / rowSums( rhoRRcpij ) , "*" ) )
+      u_rho[,j] <-
+        yy[,j,2] * rowSums( yy[,,1] ) / rho[j] -
+        rowSums( sweep( ( 1 - zz[,2] ) * yy[,,1] , 2 ,  pij[,j] / rowSums( rhocpij ) , "*" ) )
     }
 
-    # Calculate jacobian for estimating the variance of rhoRR parameters
-    jrhoRR <- vector( "numeric" , length = nrow( bigNij ) )
+    # Calculate jacobian for estimating the variance of rho parameters
+    jrho <- vector( "numeric" , length = nrow( bigNij ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
-      jrhoRR[j] <-
-        - sum( bigNij[,j] ) / rhoRR[j]^2 -
-        sum( bigRi * pij[,j]^2 / rowSums( rhoRRcpij )^2 )
+      jrho[j] <-
+        - sum( bigNij[,j] ) / rho[j]^2 -
+        sum( bigRi * pij[,j]^2 / rowSums( rhocpij )^2 )
     }
 
-    # divide u_rhoRR by the jacobian
-    u_rhoRR <- sweep( u_rhoRR , 2 , jrhoRR , "/" )
+    # divide u_rho by the jacobian
+    u_rho <- sweep( u_rho , 2 , jrho , "/" )
 
-    ### rhoMM
+    ### tau
 
-    # Calculate scores for estimating the variance of rhoMM parameters
-    u_rhoMM <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
+    # Calculate scores for estimating the variance of tau parameters
+    u_tau <- array( 0 , dim = c( nrow(xx) , nrow( bigNij ) ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
-      u_rhoMM[,j] <-
-        - yy[,j,2] * ( 1 - zz[,1] ) / ( 1 - rhoMM[j] ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] ) / sum( rhoMMnipij )
+      u_tau[,j] <-
+        - yy[,j,2] * ( 1 - zz[,1] ) / ( 1 - tau[j] ) +
+        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] ) / sum( taunipij )
     }
 
-    # Calculate jacobian for estimating the variance of rhoMM parameters
-    jrhoMM <- vector( "numeric" , length = nrow( bigNij ) )
+    # Calculate jacobian for estimating the variance of tau parameters
+    jtau <- vector( "numeric" , length = nrow( bigNij ) )
     for ( j in seq_len( nrow( bigNij ) ) ) {
-      jrhoMM[j] <-
-        - bigCj[j] / ( 1 - rhoMM[j] )^2 - bigM * sum( nipij[,j] )^2 / sum( rhoMMnipij )^2
+      jtau[j] <-
+        - bigCj[j] / ( 1 - tau[j] )^2 - bigM * sum( nipij[,j] )^2 / sum( taunipij )^2
     }
 
-    # divide u_rhoMM by the jacobian
-    u_rhoMM <- sweep( u_rhoMM , 2 , jrhoMM , "/" )
+    # divide u_tau by the jacobian
+    u_tau <- sweep( u_tau , 2 , jtau , "/" )
 
     ### eta
 
@@ -573,7 +575,7 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
         yy[,i,1] * rowSums( yy[,,2] ) / eta[i] +
         yy[,i,1] * ( 1 - zz[,2] ) / eta[i] +
         rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , pij[i,] / colSums( nipij ) , "*" ) ) +
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( rowSums( rhoMMpij )[i] / sum( rhoMMnipij ) ) - 1
+        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( rowSums( taupij )[i] / sum( taunipij ) ) - 1
     }
 
     # Calculate jacobian for estimating the variance of eta parameters
@@ -583,7 +585,7 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
         - sum( bigNij[i,] ) / eta[i]^2 -
         bigRi[i] / eta[i]^2 -
         sum( bigCj * pij[i,]^2 / colSums( nipij )^2 ) -
-        bigM * rowSums( rhoMMpij )[i]^2 / sum( rhoMMnipij )^2
+        bigM * rowSums( taupij )[i]^2 / sum( taunipij )^2
     }
 
     # divide u_eta by the jacobian
@@ -592,13 +594,13 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     ### pij
 
     # Calculate scores for estimating the variance of pij parameters
-    # lambda2 <- -( rowSums( bigNij ) + bigRi + rowSums( sweep( nipij , 2 , bigCj / colSums( nipij ) , "*" ) ) + bigM * rowSums( rhoMMnipij ) / sum( rhoMMnipij ) ) / N
+    # lambda2 <- -( rowSums( bigNij ) + bigRi + rowSums( sweep( nipij , 2 , bigCj / colSums( nipij ) , "*" ) ) + bigM * rowSums( taunipij ) / sum( taunipij ) ) / N
     u_pij <- array( 0 , dim = c( nrow( xx ) , nrow( bigNij ) , ncol( bigNij ) ) )
     for ( i in seq_len( nrow( bigNij ) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
       u_pij[,i,j] <- ( y1y2[,i,j] / pij[i,j] ) +
-        yy[,i,1] * ( 1 - zz[,2] ) * ( 1 - rhoRR[j] ) / rowSums( rhoRRcpij )[i] +
+        yy[,i,1] * ( 1 - zz[,2] ) * ( 1 - rho[j] ) / rowSums( rhocpij )[i] +
         yy[,j,2] * ( 1 - zz[,1] ) * ( eta )[i] / colSums( nipij )[j] +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( rhoMM[j] * eta[i] ) / sum( rhoMMnipij )
+        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( tau[j] * eta[i] ) / sum( taunipij )
     }
 
     # Calculate jacobian for estimating the variance of pij parameters
@@ -606,9 +608,9 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     for ( i in seq_len( nrow(bigNij) ) ) for ( j in seq_len( ncol( bigNij ) ) ) {
       jpij[i,j] <-
         - bigNij[i,j] / pij[i,j]^2 -
-        bigRi[i] * ( 1 - rhoRR[j] )^2 / rowSums( rhoRRcpij )[i]^2 -
+        bigRi[i] * ( 1 - rho[j] )^2 / rowSums( rhocpij )[i]^2 -
         bigCj[j] * eta[i]^2 / colSums( nipij )[j]^2
-      bigM * ( rhoMM[j] * eta[i] )^2 / sum( rhoMMnipij )^2
+      bigM * ( tau[j] * eta[i] )^2 / sum( taunipij )^2
     }
 
     # divide u_pij by the jacobian
@@ -635,8 +637,8 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     reslin <-
       list(
         "psi" = u_psi ,
-        "rhoRR" = u_rhoRR ,
-        "rhoMM" = u_rhoMM ,
+        "rho" = u_rho ,
+        "tau" = u_tau ,
         "eta" = u_eta ,
         "pij" = u_pij ,
         "muij" = u_muij ,
@@ -655,23 +657,23 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     psi_var <- survey::svyrecvar( sweep( as.matrix( u_psi ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
     # psi_var <- diag( psi_var )
 
-    ### rhoRR
+    ### rho
 
-    # calculate variance of rhoRR
-    rhoRR_var <- survey::svyrecvar( sweep( as.matrix( u_rhoRR ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    # rhoRR_var <- diag( rhoRR_var )
+    # calculate variance of rho
+    rho_var <- survey::svyrecvar( sweep( as.matrix( u_rho ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    # rho_var <- diag( rho_var )
 
-    ### rhoMM
+    ### tau
 
-    # calculate variance of rhoMM
-    rhoMM_var <- survey::svyrecvar( sweep( as.matrix( u_rhoMM ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-    # rhoMM_var <- diag( rhoMM_var )
+    # calculate variance of tau
+    tau_var <- survey::svyrecvar( sweep( as.matrix( u_tau ) , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    # tau_var <- diag( tau_var )
 
   } else {
 
     psi_var <- as.matrix( NA , length(psi))
-    rhoRR_var <- as.matrix( NA , length(rhoRR))
-    rhoMM_var <- as.matrix( NA , length(rhoMM))
+    rho_var <- as.matrix( NA , length(rho))
+    tau_var <- as.matrix( NA , length(tau))
 
   }
 
@@ -725,49 +727,77 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
   mvar <-
     list(
       "psi" = psi_var ,
-      "rhoRR" = rhoRR_var ,
-      "rhoMM" = rhoMM_var ,
+      "rho" = rho_var ,
+      "tau" = tau_var ,
       "eta" = eta_var ,
       "pij" = pij_var ,
       "muij" = muij_var ,
       "gamma" = gamma_var ,
       "delta" = delta_var )
 
-  ### calculate rao-scott correction
-
   if ( res$model != "MCAR" ) {
 
-    # # calculate linearized variable
-    # Amat <- if (length(psi ) > 1) sweep( sweep( pij , 1 , eta , "*" ) , 1 , psi , "*" ) else sweep( pij , 1 , eta , "*" ) * psi
-    # Bmat <- sweep( sweep( pij , 1 , eta , "*" ) , ifelse( res$model == "D" , 2 , 1 ) , rhoRR  , "*" )
+    ### calculate rao-scott correction
 
+    # combine objects
+    u_R <- yy[,,1] * ( 1 - zz[,2] )
+    u_C <- yy[,,2] * ( 1 - zz[,1] )
+    u_M <- ( 1 - zz[,1] ) * ( 1 - zz[,2] )
+    lmat <- y1y2
+    lmat <- abind::abind( list( lmat , u_R ) , along = 3 )
+    lmat <- abind::abind( list( lmat , cbind( u_C , u_M , deparse.level = 0 ) ) , along = 2 )
 
-    # uncorrected
-    pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
-    pearson$data.name <- "estimated proportions"
+    # variance under SRS
+    smalln <- sum( ww > 0 )
+    mean2 <- colSums( ww * do.call( cbind , lapply( seq_len( ncol( bigNij )+1 ) , function( z ) lmat[,z,] ) ) ) / N
+    Dmat <- diag(mean2)
+    iDmat <- diag(ifelse(mean2 == 0, 0, 1/mean2))
+    Vsrs <- (Dmat - outer(mean2, mean2))/(smalln-1)
 
-    # # F-Distribution        # not working
-    # # DeltaMat <- Matrix::solve( mvar$vcov_full ) %*% mvar$vcov_srs
-    # d0 <- sum( diag( DeltaMat ) )^2 / ( sum( diag( DeltaMat %*% DeltaMat ) ) )
-    # nu <- length( unique( design$cluster[, 1] ) ) - length( unique( design$strata[,1] ) )
-    # pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
-    # pearson$statistic <- pearson$statistic / sum( diag( DeltaMat ) )
+    # apply ratio linearization
+    lmat <- apply( lmat , 2:3 , function(z) z/N - sum( ww * z ) / N^2 )
+
+    # linearized matrix
+    lmat <- do.call( cbind , lapply( seq_len( ncol( bigNij )+1 ) , function( z ) lmat[,z,] ) )
+
+    # calculate variance
+    Vdes <- survey::svyrecvar( sweep( lmat , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+
+    # delta matrix
+    Delta <- MASS::ginv( Vsrs ) %*% Vdes
+
+    # eigenvalues of delta matrix
+    smalld <- eigen( Delta , only.values = TRUE )$values[ - NCOL(Delta) ]
+    smalld <- Re( smalld )
+
+    # # first-order correction
+    # meand <- mean( smalld )
+    # adj.chi <- chiscore / meand
+
+    # second-order correction
+    meand <- mean( smalld )
+    smalla2 <- mean( smalld^2 ) / meand^2
+    pearson$statistic <- pearson$statistic/( 1 + smalla2 )
+    pearson$p.value <- if ( res$model %in% c("A","B") ) pchisq( pearson$statistic , df = ( NCOL( Delta ) - 1 ) / ( 1 + smalla2 ) , lower.tail = FALSE ) else NA
+    # attr( pearson$statistic, "names" ) <- "F"
+    pearson$parameter <- c( df = ifelse( res$model %in% c("A","B") , ( NCOL( Delta ) - 1 ) / ( 1 + smalla2 ) , NA ) )
+    pearson$method <- "Pearson's X^2: Rao & Scott adjustment"
+    pearson$data.name <- "observed counts"
+
+    # # Snedecor F test
+    # meand <- mean( smalld )
+    # smallc <- mean( smalld^2 ) / meand^2
+    # d0 <- (ncol(Delta)/2) / smallc
+    # nu <- degf( design )
+    # warn <- options(warn = -1)
+    # pearson$statistic <- pearson$statistic/mean(smalld)
     # pearson$p.value <- pf( pearson$statistic, d0, d0 * nu, lower.tail = FALSE )
     # attr( pearson$statistic, "names" ) <- "F"
-    # pearson$parameter <- c( ndf = d0 , ddf = d0 * nu)
-    # pearson$method <- "Pearson's X^2: 2nd Rao & Scott adjustment"
-    # pearson$data.name <- "estimated counts"
+    # pearson$parameter <- c(ndf = d0, ddf = d0 * nu)
+    # pearson$method <- "Pearson's X^2: Rao & Scott adjustment"
+    # pearson$data.name <- "observed counts"
 
-    # # Chi-2 Distribution
-    # pearson <- stats::chisq.test( res$estimated.counts , correct = FALSE )
-    # DeltaMat <-  Matrix::solve( mvar$muij ) %*% mvar$vcov_srs
-    # pearson$statistic <- pearson$statistic / sum( diag( DeltaMat ) )
-    # pearson$p.value <- pchisq( pearson$statistic / mean( diag( DeltaMat ) ), df = NCOL( DeltaMat ) , lower.tail = FALSE )
-    # pearson$parameter <- c(df = NCOL(DeltaMat))
-    # pearson$method <- "Pearson's X^2: 1st Rao & Scott adjustment"
-    # pearson$data.name <- "estimated counts"
   }
-
 
   # add results
   mvar[["adj.chisq"]] <- if ( res$model == "MCAR" ) NULL else pearson

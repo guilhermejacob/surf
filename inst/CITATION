@@ -1,0 +1,20 @@
+year <- sub("-.*", "", meta$Date)
+note <- sprintf("R package version %s", meta$Version)
+
+citHeader("To cite the surf package in publications use one or more of:")
+
+citEntry( entry = "misc",
+          title = "surf: Survey-based Gross Flow Estimation",
+          author = person("Guilherme", "Jacob"),
+          year = year ,
+          note = note ,
+          textVersion = "Guilherme Jacob (2020). surf: Survey-based Gross Flow Estimation. R package version 0.2.2." )
+
+
+citEntry( entry="Unpublished",
+          year = year,
+          note = "Projeto de dissertação" ,
+          author = person("Guilherme", "Jacob") ,
+          title = "Estimação de fluxos de situação ocupacional usando a PNAD Contínua",
+          textVersion="Guilherme Jacob (2020). Estimação de fluxos de situação ocupacional usando a PNAD Contínua. Projeto de dissertação. Escola Nacional de Ciências Estatísticas/Instituto Brasileiro de Geografia e Estatística." )
+

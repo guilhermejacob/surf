@@ -3,6 +3,7 @@ Type: Package
 Title: Survey-based Flow Estimation
 Version: 0.9.1
 Author: Guilherme Jacob
+Date: 01-06-2020
 Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
 Description: Estimation of Gross Flows with Complex Surveys.
 BugReports: https://github.com/guilhermejacob/glowing-lamp
@@ -10,7 +11,9 @@ Depends:
     R (>= 3.5.0),
     stats,
     survey,
-    Matrix,
+    Matrix
+Imports:
+    MASS,
     abind,
     scales,
     stringr

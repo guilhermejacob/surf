@@ -1,10 +1,10 @@
-#' @importFrom stats model.frame model.matrix na.pass printCoefmat terms terms.formula update weights formula as.formula var pchisq
+#' @importFrom stats model.frame model.matrix na.pass printCoefmat terms terms.formula update weights formula as.formula var pchisq chisq.test pf
 #' @importFrom Matrix solve
 #' @importFrom abind abind
 #' @importFrom stringr str_pad
 #' @importFrom scales number
 
-#' @importFrom survey postStratify
+#' @importFrom survey postStratify degf
 #' @export
 postStratify.surflow.design <- function (design, strata, population, partial = FALSE, ...) {
 

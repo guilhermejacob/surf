@@ -100,8 +100,8 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(1,2) ,
   mvar <- ipf_variance( xx , ww , res = mfit , design = design , rp.variance = TRUE )
 
   # build results list
-  res <- sapply( c( "psi" , "rhoRR" , "rhoMM" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
-    if ( z %in% c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" , "delta" ) ) {
+  res <- sapply( c( "psi" , "rho" , "tau" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
+    if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
       this_stats <- mfit[[z]]
       attr( this_stats , "var" ) <- mvar[[z]]
       names( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
@@ -118,7 +118,7 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(1,2) ,
   } , simplify = FALSE )
 
   # create final object
-  rval <- res[ c( "psi" , "rhoRR" , "rhoMM" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
+  rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
   rval$model <- mfit$model
   class(rval) <- "flowstat"
   attr( rval , "rounds" )    <- rounds
@@ -127,6 +127,8 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(1,2) ,
   attr( rval , "iter" )   <- mfit$iter
   attr( rval , "unadj.chisq" )   <- mfit$unadj.chisq
   attr( rval , "adj.chisq" )   <- mvar$adj.chisq
+  attr( rval , "ll" )   <- mfit$ll
+  attr( rval , "dAIC" )   <- mvar[["dAIC"]]
   rval
 
 }
