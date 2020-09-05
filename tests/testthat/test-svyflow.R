@@ -1,6 +1,7 @@
 context("svyflow estimates with nonresponse")
 
 # load libraries
+library( survey )
 library( surf )
 
 # define sample and population sizes
@@ -8,26 +9,26 @@ n <- as.integer( 10^4 )
 N <- as.integer( 10^5 )
 
 # initial and transition probabilities for parametric model
-eta_pop <- c( .9 , .05, .05 )
-pij_pop <- matrix( c(.80, .15, .05, .30, .60, .10, .10, .10, .80 ) , ncol = 3 , nrow = 3 , byrow = T )
+eta.pop <- c( .9 , .05, .05 )
+pij.pop <- matrix( c(.80, .15, .05, .30, .60, .10, .10, .10, .80 ) , ncol = 3 , nrow = 3 , byrow = T )
 
 # expected gross flows under parametric model
-muij_pop <- N * sweep( pij_pop , 1 , eta_pop , "*" )
+muij.pop <- N * sweep( pij.pop , 1 , eta.pop , "*" )
 
 # parameters for non-reponse mechanism
-psi_pop <- .80
-rho_pop <- c( .80 , .50 , .50 )
-tau_pop <- c( .90 , .70 , .60 )
+psi.pop <- .80
+rho.pop <- c( .80 , .50 , .50 )
+tau.pop <- c( .90 , .70 , .60 )
 
 # classification labels matrix
-class_table <- expand.grid( data.frame( v0 = seq_len( nrow(pij_pop) ) , v1 = seq_len( nrow(pij_pop) ) ) )
-class_table <- class_table[ order( class_table$v0 ) , ]
+class_table <- expand.grid( data.frame( y0 = seq_len( nrow(pij.pop) ) , y1 = seq_len( nrow(pij.pop) ) ) )
+class_table <- class_table[ order( class_table$y0 ) , ]
 class_table[ ,"k_ij" ] <- as.character( seq_len( nrow( class_table ) ) )
 
 ### GENERATE POPULATION FROM PARAMETRIC MODEL
 
 # generate N observations from parametric model
-pop_fullresponse <- t( rmultinom( N , size = 1 , prob = as.numeric( t( sweep( pij_pop , 1 , eta_pop , "*" ) ) ) ) )
+pop_fullresponse <- t( rmultinom( N , size = 1 , prob = as.numeric( t( sweep( pij.pop , 1 , eta.pop , "*" ) ) ) ) )
 
 # transforms into transition typologies
 pop_fullresponse <- apply( pop_fullresponse , 1 , function( z ) seq_len( ncol( pop_fullresponse ) )[ as.logical( z ) ] )
@@ -45,7 +46,7 @@ pop_fullresponse <- pop_fullresponse[ order( pop_fullresponse$id ) , ]
 rownames( pop_fullresponse ) <- NULL
 
 # transforms into factors
-pop_fullresponse[, c( "v0" , "v1" ) ] <- lapply( pop_fullresponse[, c( "v0" , "v1" ) ] , factor , levels = c( 1:3 ) , labels = 1:3 )
+pop_fullresponse[, c( "y0" , "y1" ) ] <- lapply( pop_fullresponse[, c( "y0" , "y1" ) ] , factor , levels = c( 1:3 ) , labels = 1:3 )
 
 ### STOCHASTIC NON-RESPONSE MECHANISM
 
@@ -53,52 +54,46 @@ pop_fullresponse[, c( "v0" , "v1" ) ] <- lapply( pop_fullresponse[, c( "v0" , "v
 pop_nonrespose <- pop_fullresponse
 
 # adds non-response in time t-1
-pop_nonrespose[ as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - psi_pop ) ) , "v0" ] <- NA
+pop_nonrespose[ as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - psi.pop ) ) , "y0" ] <- NA
 
 # adds response transition in time t-1
-for ( i in seq_along( levels( pop_fullresponse$v0 ) ) ) {
-  pop_nonrespose[ pop_fullresponse$v0 == levels( pop_fullresponse$v0 )[i] &
-                    !is.na( pop_nonrespose$v0 ) &
-                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - rho_pop[i] ) ) , "v1" ] <- NA
+for ( i in seq_along( levels( pop_fullresponse$y0 ) ) ) {
+  pop_nonrespose[ pop_fullresponse$y0 == levels( pop_fullresponse$y0 )[i] &
+                    !is.na( pop_nonrespose$y0 ) &
+                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , 1 - rho.pop[i] ) ) , "y1" ] <- NA
 }
 
 # adds non-response transition in time t
-for ( i in seq_along( levels( pop_fullresponse$v0 ) ) ) {
-  pop_nonrespose[ pop_fullresponse$v0 == levels( pop_fullresponse$v0 )[i] &
-                    is.na( pop_nonrespose$v0 ) &
-                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , tau_pop[i] ) ) , "v1" ] <- NA
+for ( i in seq_along( levels( pop_fullresponse$y0 ) ) ) {
+  pop_nonrespose[ pop_fullresponse$y0 == levels( pop_fullresponse$y0 )[i] &
+                    is.na( pop_nonrespose$y0 ) &
+                    as.logical( rbinom( nrow( pop_fullresponse ) , 1 , tau.pop[i] ) ) , "y1" ] <- NA
 }
 
 ### SELECT SAMPLE
 
 # select n observations from SRS
-smp_df <- pop_nonrespose[ sample( N , n ) , c( "v0" , "v1" ) ]
+smp.df <- pop_nonrespose[ sample( N , n ) , c( "y0" , "y1" ) ]
 
 # create sample design info
-smp_df$prob <- n / N            # selection probability
-smp_df$fpcs <- N  # finite population correction
-
-# build sample data frames
-df0 <- smp_df[ , -2 , drop = FALSE ]
-df1 <- smp_df[ , 2 , drop = FALSE ]
-colnames( df0 )[1] <- "y"
-colnames( df1 )[1] <- "y"
+smp.df$prob <- n / N # selection probability
+smp.df$fpcs <- N     # finite population correction
 
 # build survey design object
-flowdes_srs <-
-  sfydesign( ids = ~ 1 ,
+flowdes.srs <-
+  svydesign( ids = ~ 1 ,
              probs = ~ prob ,
-             data = list( df0 , df1 ) ,
+             data = smp.df ,
              nest = TRUE )
 
 # # create replicate designs
 # flowdes_srs_rep <- as.surfrdesign( flowdes_srs , type = "bootstrap" , replicate = 50 )
 
 # remove objects
-rm( pop_fullresponse , pop_nonrespose , smp_df , df0 , df1 , class_table ) ; gc()
+rm( pop_fullresponse , pop_nonrespose , smp.df , class_table ) ; gc()
 
 # estimate flows
-flow_srs_lin <- svyflow( ~y , flowdes_srs , model = "C" )
+flow_srs_lin <- svyflow( ~y0+y1 , flowdes.srs , model = "C" )
 # flow_srs_rep <- svyflow( ~y , flowdes_srs_rep , model = "C" )
 
 # test extraction of associated measures
@@ -152,18 +147,18 @@ test_that( "extraction of estimates" , {
 test_that("compare point estimates vs population values",{
 
   # linearized design
-  expect_equivalent( coef( flow_srs_lin$psi ) , psi_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_srs_lin$rho ) , rho_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_srs_lin$tau ) , tau_pop , tolerance = .50 )
-  expect_equivalent( coef( flow_srs_lin$eta ) , eta_pop , tolerance = .20 )
-  expect_equivalent( coef( flow_srs_lin$muij ) , muij_pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_lin$psi ) , psi.pop , tolerance = .50 )
+  expect_equivalent( coef( flow_srs_lin$rho ) , rho.pop , tolerance = .50 )
+  expect_equivalent( coef( flow_srs_lin$tau ) , tau.pop , tolerance = .50 )
+  expect_equivalent( coef( flow_srs_lin$eta ) , eta.pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_lin$muij ) , muij.pop , tolerance = .20 )
 
   # # replicate design
-  # expect_equivalent( coef( flow_srs_rep$psi ) , psi_pop , tolerance = .20 )
-  # expect_equivalent( coef( flow_srs_rep$rho ) , rho_pop , tolerance = .20 )
-  # expect_equivalent( coef( flow_srs_rep$tau ) , tau_pop , tolerance = .20 )
-  # expect_equivalent( coef( flow_srs_rep$eta ) , eta_pop , tolerance = .20 )
-  # expect_equivalent( coef( flow_srs_rep$muij ) , muij_pop , tolerance = .20 )
+  # expect_equivalent( coef( flow_srs_rep$psi ) , psi.pop , tolerance = .20 )
+  # expect_equivalent( coef( flow_srs_rep$rho ) , rho.pop , tolerance = .20 )
+  # expect_equivalent( coef( flow_srs_rep$tau ) , tau.pop , tolerance = .20 )
+  # expect_equivalent( coef( flow_srs_rep$eta ) , eta.pop , tolerance = .20 )
+  # expect_equivalent( coef( flow_srs_rep$muij ) , muij.pop , tolerance = .20 )
 
 } )
 

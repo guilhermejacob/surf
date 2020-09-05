@@ -5,11 +5,9 @@
 #'
 #' @param x  a formula indicating a \emph{factor} variable.
 #' @param design  surflow.design object
-#' @param rounds  a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.
 #' @param model  model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
 #' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
-#' @param pij.zero  A logical matrix defining structural zeroes in transition matrix. Defaults to \code{pij.zero = NULL}.
 #' @param ...  future expansion.
 #'
 #' @details The \code{na.rm} option should be used cautiously. Usually, \code{NA} encoding has two possible meanings: a \emph{missing} information or
@@ -41,60 +39,69 @@
 #' @examples
 #'
 #' # load library
+#' library( survey )
 #' library( surf )
 #'
 #' # load data
-#' data( "artificial" )
+#' data( "LFS79.0809" )
 #'
 #' # create surf design object
-#' flowdes <-
-#'   sfydesign( ids = ~0 ,
-#'                  probs = ~ prob ,
-#'                  data = list( df1 , df2 ) ,
-#'                  nest = TRUE )
+#' lfs.des <- svydesign( ids = ~0 , probs = ~ prob , data = LFS79.0809 , nest = TRUE )
 #'
 #' # flow estimates
-#' estflows <- svyflow( ~y , design = flowdes )
+#' estflows <- svyflow( ~y1+y2 , design = lfs.des )
 #' coef( estflows$muij )
 #' SE( estflows$muij )
 #'
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(1,2) , tol = 1e-4 , verbose = FALSE , pij.zero = NULL , ... ){
+svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , verbose = FALSE , ... ){
 
   # test values
-  model <- match.arg( model , c("A","B","C","D","MCAR") , several.ok = FALSE )
-  if ( !all( rounds %in% seq_along( design$variables ) ) ) stop( "rounds not in range." )
+  model <- match.arg( model , several.ok = FALSE )
 
-  # Collect sample data and put in single data frame
-  xx <- lapply( design$variables[ rounds ] , function( z ) stats::model.frame( x , data = z , na.action = stats::na.pass ) )
-  xx <- do.call( cbind , xx )
+  # collect sample data and put in single data frame
+  xx <- stats::model.frame( x , data = design$variables , na.action = stats::na.pass )
 
-  # Test column format
+  # test column format
   if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
+
   # Gets levels of factors for both time periods
   xlevels <- lapply( xx , function(zz) levels( zz ) )
-  # Gets dimension of variable for which flows are to be estimated
+
+  # gets dimension of variable for which flows are to be estimated
   ll <- lapply( xlevels , function(zz) length( zz ) )
   if ( !all( ll[[1]] == ll[[2]] & xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
-  # When levels are the same across periods, returns unique levels of variable for which flows are to be estimated
+
+  # when levels are the same across periods, returns unique levels of variable for which flows are to be estimated
   xlevels <- unique( unlist(xlevels) )
-  # Gets dimension of variable for which flows are to be estimated
+
+  # check for ordered categories
   ll <- unique( unlist(ll) )
   has.order <- ifelse( all( sapply( xx , is.ordered ) ) , TRUE , FALSE )
 
-  # Revise names of columns on sample response data set
-  colnames( xx ) <- paste0( "round" , seq_along( colnames( xx ) ) , ":" , colnames( xx ) )
-
-  # Collect weights
+  # collect weights
   ww <-  stats::weights( design )
 
-  # if no missing, use simple contingency table
-  if ( !any( is.na( xx[ ww > 0 ,] ) ) ) model <- "MCAR"
+  # estimate counts
+  Amat <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
+
+  # test for zero counts
+  if ( any( Amat <= 0 ) ) {
+    # issue warning
+    warning( "stopping. some cells had zero counts. consider collapsing categories.")
+    return( Amat )
+  }
+
+  # check for convergence conditions under model D
+ if ( any( Amat[ - nrow( Amat ) , ncol( Amat ) ] > Amat[ nrow( Amat ) , ncol( Amat ) ] ) & model == "D" ) {
+   stop( "stopping. model D does not converge when M is smaller than Cj. consider using model C.")
+   return( Amat )
+ }
 
   # model fitting
-  mfit <- ipf( xx , ww , model = model , tol = tol , verbose = verbose , pij.zero = pij.zero )
+  mfit <- ipf( Amat , model = model , tol = tol , verbose = verbose )
 
   # variance estimation
   mvar <- ipf_variance( xx , ww , res = mfit , design = design , rp.variance = TRUE )
@@ -121,29 +128,29 @@ svyflow.survey.design2 <- function( x , design , model = "A" , rounds = c(1,2) ,
   rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
   rval$model <- mfit$model
   class(rval) <- "flowstat"
-  attr( rval , "rounds" )    <- rounds
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
   attr( rval , "iter" )   <- mfit$iter
   attr( rval , "unadj.chisq" )   <- mfit$unadj.chisq
   attr( rval , "adj.chisq" )   <- mvar$adj.chisq
-  attr( rval , "ll" )   <- mfit$ll
-  attr( rval , "dAIC" )   <- mvar[["dAIC"]]
+  attr( rval , "observed.counts" )   <- mfit$observed.counts
+
+  # return final object
   rval
 
 }
 
 #' @export
-#' @rdname svyflow
-#' @method svyflow surflow.design
-svyflow.surflow.design <- function( x , design , ... ) {
-  NextMethod( "svyflow" , design , ... )
-}
+svyflow <- function( x , design , model = c( "A","B","C","D") , ... ) {
 
-#' @export
-svyflow <- function( x , design , ... ) {
+  # test values
+  model <- match.arg( model , several.ok = FALSE )
+
   # test valid arguments
-  if ( class(x) != "formula" ) stop( "x must be a formula." )
-  if ( length(x) != 2 ) stop( "x must be a single variable." )
+  if ( class( x ) != "formula" ) stop( "x must be a formula." )
+  if ( length( as.character( ~y1+y2 ) ) != 2 ) stop( "x must be a one-sided formula." )
+  if ( length( ( strsplit( as.character( ~y1+y2 )[[2]] , " \\+ " ) )[[1]] ) != 2 ) stop("only two-way tables at the moment.")
+  if ( ncol( attr( terms( x ) , "factors" ) ) != 2 ) stop("only two-way tables at the moment.")
   UseMethod( "svyflow" , design )
+
 }

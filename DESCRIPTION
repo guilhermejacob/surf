@@ -1,9 +1,9 @@
 Package: surf
 Type: Package
 Title: Survey-based Flow Estimation
-Version: 0.9.1
+Version: 0.9.5
 Author: Guilherme Jacob
-Date: 01-06-2020
+Date: 05-09-2020
 Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
 Description: Estimation of Gross Flows with Complex Surveys.
 BugReports: https://github.com/guilhermejacob/glowing-lamp
@@ -24,6 +24,6 @@ Suggests:
     sampling,
     rmarkdown, 
     knitr
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Encoding: UTF-8

@@ -29,3 +29,20 @@ cv.svymstat <- function( object , ... ) {
   semat <- sqrt(vmat)
   semat / cmat
 }
+
+#' @importFrom stats confint
+#' @exportS3Method  confint svymstat
+confint.svymstat <- function(object , parm , level = 0.95, df = Inf, ...) {
+  cf <- coef(object)
+  pnames <- names(cf)
+  a <- (1 - level)/2
+  a <- c(a, 1 - a)
+  pct <- format.perc(a, 3)
+  fac <- qt(a, df = df)
+  ses <- SE(object)
+  ci <- sweep( ses %o% fac , 1:2 , cf , "+" )
+  dimnames( ci )[[3]] <- pct
+  ci <- list( ci[,,1] , ci[,,2] )
+  names( ci ) <- pct
+  ci
+}

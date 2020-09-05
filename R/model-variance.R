@@ -746,56 +746,38 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     lmat <- y1y2
     lmat <- abind::abind( list( lmat , u_R ) , along = 3 )
     lmat <- abind::abind( list( lmat , cbind( u_C , u_M , deparse.level = 0 ) ) , along = 2 )
+    lmat <- do.call( cbind , lapply( seq_len( ncol( bigNij )+1 ) , function( z ) lmat[,z,] ) )
 
-    # variance under SRS
-    smalln <- sum( ww > 0 )
-    mean2 <- colSums( ww * do.call( cbind , lapply( seq_len( ncol( bigNij )+1 ) , function( z ) lmat[,z,] ) ) ) / N
+    # variance under SRS: proprotions
+    smalln <- sum( ww >0 )
+    mean2 <- ( res$observed.counts / sum( res$observed.counts ) )
+    mean2 <- as.numeric(t(mean2))
     Dmat <- diag(mean2)
     iDmat <- diag(ifelse(mean2 == 0, 0, 1/mean2))
     Vsrs <- (Dmat - outer(mean2, mean2))/(smalln-1)
 
-    # apply ratio linearization
-    lmat <- apply( lmat , 2:3 , function(z) z/N - sum( ww * z ) / N^2 )
-
-    # linearized matrix
-    lmat <- do.call( cbind , lapply( seq_len( ncol( bigNij )+1 ) , function( z ) lmat[,z,] ) )
-
     # calculate variance
-    Vdes <- survey::svyrecvar( sweep( lmat , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+    mean3.prop <- survey::svymean( lmat , design )
+    Vdes <- stats::vcov( mean3.prop )
 
     # delta matrix
     Delta <- MASS::ginv( Vsrs ) %*% Vdes
+    d0 <- sum(diag(Delta))^2/(sum(diag(Delta %*% Delta)))
+    nu <- length(unique(design$cluster[, 1])) - length(unique(design$strata[, 1]))
 
-    # eigenvalues of delta matrix
-    smalld <- eigen( Delta , only.values = TRUE )$values[ - NCOL(Delta) ]
-    smalld <- Re( smalld )
-
-    # # first-order correction
-    # meand <- mean( smalld )
-    # adj.chi <- chiscore / meand
-
-    # second-order correction
-    meand <- mean( smalld )
-    smalla2 <- mean( smalld^2 ) / meand^2
-    pearson$statistic <- pearson$statistic/( 1 + smalla2 )
-    pearson$p.value <- if ( res$model %in% c("A","B") ) pchisq( pearson$statistic , df = ( NCOL( Delta ) - 1 ) / ( 1 + smalla2 ) , lower.tail = FALSE ) else NA
-    # attr( pearson$statistic, "names" ) <- "F"
-    pearson$parameter <- c( df = ifelse( res$model %in% c("A","B") , ( NCOL( Delta ) - 1 ) / ( 1 + smalla2 ) , NA ) )
+    # apply correction
+    pearson <- res$unadj.chisq
+    pearson$statistic <- pearson$statistic/sum(diag(Delta))
+    if ( res$model %in% c("A","B") ) {
+      pearson$p.value <- pf( pearson$statistic, d0, d0 * nu, lower.tail = FALSE)
+      pearson$parameter <- c(ndf = d0, ddf = d0 * nu)
+    } else {
+      pearson$p.value <- NA
+      pearson$parameter <- c(ndf = NA , ddf = NA )
+    }
+    attr(pearson$statistic, "names") <- "F"
     pearson$method <- "Pearson's X^2: Rao & Scott adjustment"
-    pearson$data.name <- "observed counts"
-
-    # # Snedecor F test
-    # meand <- mean( smalld )
-    # smallc <- mean( smalld^2 ) / meand^2
-    # d0 <- (ncol(Delta)/2) / smallc
-    # nu <- degf( design )
-    # warn <- options(warn = -1)
-    # pearson$statistic <- pearson$statistic/mean(smalld)
-    # pearson$p.value <- pf( pearson$statistic, d0, d0 * nu, lower.tail = FALSE )
-    # attr( pearson$statistic, "names" ) <- "F"
-    # pearson$parameter <- c(ndf = d0, ddf = d0 * nu)
-    # pearson$method <- "Pearson's X^2: Rao & Scott adjustment"
-    # pearson$data.name <- "observed counts"
+    pearson$data.name <- paste0( "Observed counts vs. Expected counts under model " , res$model )
 
   }
 

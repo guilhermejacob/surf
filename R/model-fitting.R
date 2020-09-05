@@ -1,12 +1,11 @@
 # function for model fitting
-ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.values = list( "psi" = NULL , "rho" = NULL , "tau" = NULL , "eta" = NULL , "pij" = NULL ) ,  pij.zero = NULL ) {
+ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
 
   # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
-  bigNij <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
-  bigRi <- bigNij[ , ncol(bigNij) ][ - nrow( bigNij ) ]
-  bigCj <- bigNij[ nrow(bigNij) , ][ - ncol( bigNij ) ]
-  bigM <- bigNij[ nrow( bigNij ) , ncol( bigNij ) ]
-  bigNij <- as.matrix( bigNij[ -nrow( bigNij ) , -ncol( bigNij ) ] )
+  bigRi <- CountMatrix[ , ncol(CountMatrix) ][ - nrow( CountMatrix ) ]
+  bigCj <- CountMatrix[ nrow(CountMatrix) , ][ - ncol( CountMatrix ) ]
+  bigM <- CountMatrix[ nrow( CountMatrix ) , ncol( CountMatrix ) ]
+  bigNij <- as.matrix( CountMatrix[ -nrow( CountMatrix ) , -ncol( CountMatrix ) ] )
   N  <- sum( bigNij ) + sum( bigRi ) + sum( bigCj ) + bigM
 
   # fix zero probabilities
@@ -17,15 +16,11 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
   # test if margins are not zero
   if ( any( rowSums( bigNij ) == 0 , colSums( bigNij ) == 0 ) ) stop( "a line or column total is equal to zero. consider removing the category." )
 
-  # structural zeros in transition matrix
-  if ( is.null( pij.zero ) ) pij.zero <- matrix( FALSE , nrow = nrow( bigNij ) , ncol = ncol( bigNij ) )
-
   # number of categories
   k <- ncol(bigNij)
 
   # number of counts
   n.counts <- (k+1)^2
-  if ( any( pij.zero ) ) n.counts <- n.counts - sum( pij.zero )
 
   # number of model parameters
   switch( model ,
@@ -34,7 +29,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
           B = { n.parms <- k^2 + 2*k + 2 } ,
           C = { n.parms <- k^2 + 3*k + 1 } ,
           D = { n.parms <- k^2 + 3*k + 1 } )
-  if ( any( pij.zero ) ) n.parms <- n.parms - sum( pij.zero )
 
   # number of restrictions
   n.restr <- k+1
@@ -45,9 +39,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
     # MCAR estimation
     eta <- rowSums( bigNij ) / sum( bigNij )
     pij <- bigNij / rowSums( bigNij )
-
-    # adjust for structural zeros in transition matrix
-    if ( any( pij.zero ) ) pij[ pij.zero ] <- 0
 
     # return final estimates
     res <-
@@ -65,8 +56,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = eta ,
         "pij" = pij ,
         "muij" = N * sweep( pij , 1 , eta , "*" ) ,
-        "gamma" = colSums( sweep( pij , 1 , eta , "*" ) ) ,
-        "pij.zero" = pij.zero )
+        "gamma" = colSums( sweep( pij , 1 , eta , "*" ) ) )
 
   } , A = {
     # Obtain maximum pseudo-likelihood estimates for response model parameters
@@ -77,8 +67,8 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
 
     # Obtain starting values for estimating superpopulation model flow parameters
     # eta and pij according to Result 4.3 of Rojas (2014, p.45)
-    eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
-    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
+    eta0 <- etav <- rowSums( bigNij ) / sum( bigNij )
+    pij0 <- pijv <- sweep( bigNij , 1 , rowSums( bigNij ) , "/" )
     maxdiff <- Inf
     v = 0
 
@@ -102,14 +92,11 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         sweep( bigNij + sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , bigCj , "*" ) , 1 ,
                rowSums( bigNij ) + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , bigCj , "*" ) ) , "/" )
 
-      # adjust for structural zeros in transition matrix
-      if ( any( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
-
       # calculate maximum absolute difference
       maxdiff <- max( abs( c( c( etav - eta0 ) , c( pijv - pij0 ) ) ) )
 
       # process tracker
-      if (verbose) cat( ifelse(v==1,"\n","") , " iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
       # test for convergence
       if ( maxdiff <= tol ) break()
@@ -136,8 +123,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
-        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
-        "pij.zero" = pij.zero )
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) )
   } ,
   B ={
     # Obtain maximum pseudo-likelihood estimates for response model parameters
@@ -148,9 +134,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
     # Obtain starting values for estimating superpopulation model flow parameters
     # psii, eta and pij according to Result 4.8 of Rojas (2014, p.49)
     # psii0 <- psiiv <- rep( sum( bigNij ) + sum( bigRi ) , nrow( bigNij ) ) / N
-    psii0 <- psiiv <- if ( is.null( starting.values[["psi"]] ) ) rep( ( sum( bigNij ) + sum( bigRi ) ) / N , nrow( bigNij ) ) else starting.values[["psi"]]
-    eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
-    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
+    psii0 <- psiiv <- rep( ( sum( bigNij ) + sum( bigRi ) ) / N , nrow( bigNij ) )
+    eta0 <- etav <- rowSums( bigNij ) / sum( bigNij )
+    pij0 <- pijv <- sweep( bigNij , 1 , rowSums( bigNij ) , "/" )
     maxdiff <- Inf
     v = 0
 
@@ -185,9 +171,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         sweep( bigNij + sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , bigCj , "*" ) , 1 ,
                rowSums( bigNij ) + rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , bigCj , "*" ) ) , "/" )
 
-      # adjust for structural zeros in transition matrix
-      if ( any( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
-
       # calculate changes
       these_diffs <- c( c( psiiv - psii0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -195,7 +178,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       maxdiff <- max( abs( these_diffs ) )
 
       # process tracker
-      if (verbose) cat( ifelse(v==1,"\n","") , " iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
       # test for convergence
       if ( maxdiff <= tol ) break()
@@ -223,8 +206,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
-        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
-        "pij.zero" = pij.zero )
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) )
 
   } ,
   C = {
@@ -236,9 +218,9 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
 
     # Obtain starting values for estimating superpopulation model flow parameters
     # psii, eta and pij according to Result 4.13 of Rojas (2014, p.62)
-    taui0 <- tauiv <- if ( is.null( starting.values[["tau"]] ) ) rep( bigM / ( sum( bigCj ) + bigM ) , nrow( bigNij ) ) else starting.values[["tau"]]
-    eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
-    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
+    taui0 <- tauiv <- rep( bigM / ( sum( bigCj ) + bigM ) , nrow( bigNij ) )
+    eta0 <- etav <- rowSums( bigNij ) / sum( bigNij )
+    pij0 <- pijv <- sweep( bigNij , 1 , rowSums( bigNij ) , "/" )
     maxdiff <- Inf
     v = 0
 
@@ -270,9 +252,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         bigNij + sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , bigCj , "*" ) , 1 ,
         rowSums( bigNij ) + rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , bigCj , "*" ) ) , "/" )
 
-      # adjust for structural zeros in transition matrix
-      if ( any( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
-
       # calculate changes
       these_diffs <- c( c( tauiv - taui0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -280,7 +259,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       maxdiff <- max( abs( these_diffs ) )
 
       # process tracker
-      if (verbose) cat( ifelse(v==1,"\n","") , " iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
       # test for convergence
       if ( maxdiff <= tol ) break()
@@ -308,8 +287,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
-        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
-        "pij.zero" = pij.zero )
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) )
 
   } ,
   D = {
@@ -320,10 +298,10 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
 
     # Obtain starting values for estimating superpopulation model flow parameters
     # rhoj, tauj, eta and pij
-    rhoj0 <- rhojv <- if ( is.null( starting.values[["rho"]] ) ) rep( sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) ) , ncol( bigNij ) ) else starting.values[["rho"]]
-    tauj0 <- taujv <- if ( is.null( starting.values[["tau"]] ) ) rep( bigM / ( sum( bigCj ) + bigM ) , ncol( bigNij ) ) else starting.values[["tau"]]
-    eta0 <- etav <- if ( is.null( starting.values[["eta"]] ) ) rowSums( bigNij ) / sum( bigNij ) else starting.values[["eta"]]
-    pij0 <- pijv <- if ( is.null( starting.values[["pij"]] ) ) sweep( bigNij , 1 , rowSums( bigNij ) , "/" ) else starting.values[["pij"]]
+    rhoj0 <- rhojv <- rep( sum( bigNij ) / ( sum( bigNij ) + sum( bigRi ) ) , ncol( bigNij ) )
+    tauj0 <- taujv <- rep( bigM / ( sum( bigCj ) + bigM ) , ncol( bigNij ) )
+    eta0 <- etav <- rowSums( bigNij ) / sum( bigNij )
+    pij0 <- pijv <- sweep( bigNij , 1 , rowSums( bigNij ) , "/" )
     maxdiff <- Inf
     v = 0
 
@@ -365,9 +343,6 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
             rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , bigCj , "*" ) ) +
             bigM * rowSums( nipijtau ) / sum( nipijtau ) , "/" )
 
-      # adjust for structural zeros in transition matrix
-      if ( any( pij.zero ) ) pij0[ pij.zero ] <- pijv[ pij.zero ] <- 0
-
       # calculate changes
       these_diffs <- c( c( rhojv - rhoj0 ) , c( taujv - tauj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -375,7 +350,7 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
       maxdiff <- max( abs( these_diffs ) )
 
       # process tracker
-      if (verbose) cat( ifelse(v==1,"\n","") , " iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
       # test for convergence
       if ( maxdiff <= tol ) break()
@@ -404,13 +379,12 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
         "eta" = etav ,
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
-        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) ,
-        "pij.zero" = pij.zero )
+        "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) )
 
   } )
 
   # verbose treat
-  if (verbose) cat( "\n\n" )
+  if (verbose) cat( "\n" )
 
   ### net flows
   mfit[["delta"]] <- N * ( mfit$gamma - mfit$eta )
@@ -460,28 +434,28 @@ ipf <- function( xx , ww , model , tol = 1e-8 , verbose = FALSE , starting.value
   # store estimated counts
   mfit[["estimated.counts"]] <- estimated.props * N
 
-  # adjust for structural zeros in transition matrix
-  if ( !is.null( pij.zero ) ) chimat[ which( pij.zero , arr.ind = TRUE ) ] <- 0
-
   # calculate unadjusted test score
-  chimat <- sum( ww > 0 ) * chimat
-  chiscore <- sum( chimat )
+  chiscore <- sum( N * chimat )
 
   # store unadjusted chi-square test score
   warn <- options(warn = -1)
-  mfit[["unadj.chisq"]] <- chisq.test( chimat , correct = FALSE )
+  mfit[["unadj.chisq"]] <- chisq.test( matrix( 10, ncol = 3 , nrow = 3 ) , correct = FALSE )
+  mfit[["unadj.chisq"]]$statistic[[1]] <- chiscore
 
   # recalculate p-value
   if (model %in% c( "A" , "B" ) ) {
-    mfit[["unadj.chisq"]]$parameter <- n.counts + n.restr - n.parms
-    mfit[["unadj.chisq"]]$p.value <- pchisq( mfit[["unadj.chisq"]]$statistic , n.counts + n.restr - n.parms , lower.tail = FALSE)
+    mfit[["unadj.chisq"]]$parameter[[1]] <- n.counts + n.restr - n.parms
+    mfit[["unadj.chisq"]]$p.value <- pchisq( mfit[["unadj.chisq"]]$statistic , n.counts + n.restr - n.parms , lower.tail = FALSE )
   } else {
-    mfit[["unadj.chisq"]]$parameter <- 0
+    mfit[["unadj.chisq"]]$parameter[[1]] <- 0
     mfit[["unadj.chisq"]]$p.value <-  NA
   }
+  mfit[["unadj.chisq"]]$data.name <- "observed vs. expected counts"
+  mfit[["unadj.chisq"]]$method <- "Unadjusted Pearson's Chi-squared test"
 
   # store countss
   mfit[["model.info"]] <- c( n.counts , n.restr , n.parms )
+  mfit[["observed.counts"]] <- CountMatrix
 
   # return fit
   return( mfit )

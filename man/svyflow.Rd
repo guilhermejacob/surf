@@ -3,21 +3,16 @@
 \name{svyflow}
 \alias{svyflow}
 \alias{svyflow.survey.design2}
-\alias{svyflow.surflow.design}
 \title{Gross flow estimation between categories}
 \usage{
 \method{svyflow}{survey.design2}(
   x,
   design,
-  model = "A",
-  rounds = c(1, 2),
+  model = c("A", "B", "C", "D"),
   tol = 1e-04,
   verbose = FALSE,
-  pij.zero = NULL,
   ...
 )
-
-\method{svyflow}{surflow.design}(x, design, ...)
 }
 \arguments{
 \item{x}{a formula indicating a \emph{factor} variable.}
@@ -26,13 +21,9 @@
 
 \item{model}{model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.}
 
-\item{rounds}{a vector of integers indicating which round to use. Defaults to \code{rounds = c(0,1)}.}
-
 \item{tol}{Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.}
 
 \item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
-
-\item{pij.zero}{A logical matrix defining structural zeroes in transition matrix. Defaults to \code{pij.zero = NULL}.}
 
 \item{...}{future expansion.}
 }
@@ -61,20 +52,17 @@ actual missing responses.
 
 
 # load library
+library( survey )
 library( surf )
 
 # load data
-data( "artificial" )
+data( "LFS79.0809" )
 
 # create surf design object
-flowdes <-
-  sfydesign( ids = ~0 ,
-                 probs = ~ prob ,
-                 data = list( df1 , df2 ) ,
-                 nest = TRUE )
+lfs.des <- svydesign( ids = ~0 , probs = ~ prob , data = LFS79.0809 , nest = TRUE )
 
 # flow estimates
-estflows <- svyflow( ~y , design = flowdes )
+estflows <- svyflow( ~y1+y2 , design = lfs.des )
 coef( estflows$muij )
 SE( estflows$muij )
 
