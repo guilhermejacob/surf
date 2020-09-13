@@ -111,7 +111,8 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
     if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
       this_stats <- mfit[[z]]
       attr( this_stats , "var" ) <- mvar[[z]]
-      names( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
+      names( this_stats ) <- if ( length( this_stats ) > 1 ) xlevels else z
+      colnames( attr( this_stats , "var" ) ) <- rownames( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
       class( this_stats ) <- "svystat"
       attr( this_stats , "statistic" ) <- z
     } else if ( z %in% c( "pij" , "muij" ) ) {
