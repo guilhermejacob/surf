@@ -94,12 +94,6 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
     return( Amat )
   }
 
-  # check for convergence conditions under model D
- if ( any( Amat[ - nrow( Amat ) , ncol( Amat ) ] > Amat[ nrow( Amat ) , ncol( Amat ) ] ) & model == "D" ) {
-   stop( "stopping. model D does not converge when M is smaller than Cj. consider using model C.")
-   return( Amat )
- }
-
   # model fitting
   mfit <- ipf( Amat , model = model , tol = tol , verbose = verbose )
 
@@ -149,8 +143,8 @@ svyflow <- function( x , design , model = c( "A","B","C","D") , ... ) {
 
   # test valid arguments
   if ( class( x ) != "formula" ) stop( "x must be a formula." )
-  if ( length( as.character( ~y1+y2 ) ) != 2 ) stop( "x must be a one-sided formula." )
-  if ( length( ( strsplit( as.character( ~y1+y2 )[[2]] , " \\+ " ) )[[1]] ) != 2 ) stop("only two-way tables at the moment.")
+  if ( length( as.character( x ) ) != 2 ) stop( "x must be a one-sided formula." )
+  if ( length( ( strsplit( as.character( x )[[2]] , " \\+ " ) )[[1]] ) != 2 ) stop("only two-way tables at the moment.")
   if ( ncol( attr( terms( x ) , "factors" ) ) != 2 ) stop("only two-way tables at the moment.")
   UseMethod( "svyflow" , design )
 

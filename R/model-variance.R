@@ -193,7 +193,7 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     jpij <- array( 0 , dim = c( nrow(Nij) , ncol(Nij) ) )
     for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
       # jpij[i,j] <- - Nij[i,j] / pij[i,j]^2 - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2
-      jpij[i,j] <- - Nij[i,j] / pij[i,j]^2 - Ri[i] - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2 - M * eta[i]^2
+      jpij[i,j] <- - (Nij[i,j] / (pij[i,j]^2)) - Ri[i] - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2 - M * eta[i]^2
     }
 
     # divide u_pij by the jacobian
@@ -232,7 +232,7 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     # calculate auxiliary stats
     nipij <- sweep( pij , 1 , eta , "*" )
     psicni <- ( 1 - psi ) * eta
-    psicnipij <- sweep( pij , 1 , psicni , "*" )
+    psicnipij <- sweep( nipij , 1 , 1 - psi , "*" )
     psicpij <- sweep( pij , 1 , 1 - psi , "*" )
 
     ### psi
@@ -241,21 +241,18 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     u_psi <- array( 0 , dim = c( nrow(xx) , nrow( Nij ) ) )
     for ( i in seq_len( nrow( Nij ) ) ) {
       u_psi[,i] <-
-        yy[,i,1] * rowSums( yy[,,2] ) / psi[i] +
-        yy[,i,1] * ( 1 - zz[,2] ) / psi[i] -
+        ( yy[,i,1] * rowSums( yy[,,2] ) / psi[i] ) +
+        ( yy[,i,1] * ( 1 - zz[,2] ) / psi[i] ) -
         rowSums( sweep( ( 1 - zz[,1] ) * yy[,,2] , 2 , nipij[i,] / colSums( psicnipij ) , "*" ) ) -
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i] / sum( psicni )
+        (( 1 - zz[,1] ) * ( 1 - zz[,2] )) * (rowSums(nipij)[i] / sum( psicnipij ))
     }
 
     # Calculate jacobian for estimating the variance of psi parameters
     jpsi <- vector( "numeric" , length = nrow( Nij ) )
-    for ( i in seq_len( nrow( Nij ) ) ) {
-      jpsi[i] <-
-        - sum( Nij[i,] ) / psi[i]^2 -
-        Ri[i] / psi[i]^2 -
-        sum( Cj * nipij[i,]^2 / colSums( psicnipij )^2 ) -
-        M * eta[i]^2 / sum( psicni )^2
-    }
+    jpsi <- - ( rowSums( Nij ) / psi^2)
+        - ( Ri / (psi^2) ) -
+        rowSums( sweep( sweep( nipij^2 , 2 , colSums( psicnipij )^2 , "/" ) , 2 , Cj , "*" ) ) -
+        (M * ( (rowSums( nipij )^2) / (sum( psicnipij )^2) ))
 
     # divide u_psi by the jacobian
     u_psi <- sweep( u_psi , 2 , jpsi , "/" )
@@ -288,21 +285,18 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     u_eta <- array( 0 , dim = c( nrow(xx) , nrow( Nij ) ) )
     for ( i in seq_len( nrow( Nij ) ) ) {
       u_eta[,i] <-
-        yy[,i,1] * rowSums( yy[,,2] ) / eta[i] +
-        yy[,i,1] * ( 1 - zz[,2] ) / eta[i] +
+        ((yy[,i,1] * rowSums( yy[,,2] )) / eta[i]) +
+        ((yy[,i,1] * ( 1 - zz[,2] )) / eta[i]) +
         rowSums( sweep( ( 1 - zz[,1] ) * yy[,,2] , 2 , psicpij[i,] / colSums( psicnipij ) , "*" ) ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( 1 - psi[i] ) / sum( psicni )
+        ((( 1 - zz[,1] ) * ( 1 - zz[,2] )) * (( rowSums(psicpij)[i] ) / sum( psicnipij )))
     }
 
     # Calculate jacobian for estimating the variance of eta parameters
     jeta <- vector( "numeric" , length = nrow( Nij ) )
-    for ( i in seq_len( nrow( Nij ) ) ) {
-      jeta[i] <-
-        - sum( Nij[i,] ) / eta[i]^2 -
-        Ri[i] / eta[i]^2 -
-        sum( Cj * psicpij[i,]^2 / colSums( psicnipij )^2 ) -
-        M * ( 1- psi[i] )^2 / sum( psicni )^2
-    }
+    jeta <- - ( rowSums( Nij ) / eta^2)
+    - ( Ri / (eta^2) ) -
+      rowSums( sweep( sweep( psicpij^2 , 2 , colSums( psicnipij )^2 , "/" ) , 2 , Cj , "*" ) ) -
+      ( M * ( ( rowSums( psicpij )^2 ) / (sum( psicnipij )^2) ) )
 
     # divide u_eta by the jacobian
     u_eta <- sweep( u_eta , 2 , jeta , "/" )
@@ -313,20 +307,16 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     u_pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
     for ( i in seq_len( nrow( Nij ) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
       u_pij[,i,j] <- ( y1y2[,i,j] / pij[i,j] ) +
-        ( yy[,i,1] * ( 1 - zz[,2] ) ) +
+        ( yy[,i,1] * ( 1 - zz[,2] ) ) -
         ( yy[,j,2] * ( 1 - zz[,1] ) ) * ( psicni[i] / colSums( psicnipij )[j] ) +
         ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( psicni[i] / sum( psicnipij ) )
     }
 
     # Calculate jacobian for estimating the variance of pij parameters
     jpij <- array( 0 , dim = c( nrow(Nij) , ncol(Nij) ) )
-    for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
-      jpij[i,j] <-
-        - Nij[i,j] / pij[i,j]^2 -
-        Ri[i] -
-        Cj[j] * psicni[i]^2 / colSums( psicnipij )[j]^2 -
-        M * ( psicni[i]^2 ) / sum( psicni )^2
-    }
+    jpij <- - sweep( ( Nij / (pij^2) ) , 1 , Ri , "+" )
+    for ( i in seq_len( nrow( Nij ) ) ) jpij[i,] <- jpij[i,] - ((Cj / colSums( psicnipij )^2)*(psicni[i]^2))
+    jpij <- sweep( jpij , 1 , ( M * psicni^2 / ( sum( psicnipij )^2 ) ) , "-" )
 
     # divide u_pij by the jacobian
     u_pij <- sweep( u_pij , 2:3 , jpij , "/" )
@@ -506,21 +496,21 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     nipij <- sweep( pij , 1 , eta , "*" )
     rhopij <- sweep( pij , 2 , rho , "*" )
     rhocpij <- sweep( pij , 2 , 1 - rho , "*" )
+    rhocnipij <- sweep( nipij , 2 , 1 - rho , "*" )
     taunipij <- sweep( nipij , 2 , tau , "*" )
     taupij <- sweep( pij , 2 , tau , "*" )
-    taucpij <- sweep( 1 - pij , 2 , tau , "*" )
 
     ### psi
 
     # Calculate scores for estimating the variance of psi parameters
     u_psi <-
-      rowSums( apply( y1y2 , 1:2 , sum ) ) / psi +
-      rowSums( yy[,,1] * (1 - zz[,2] ) ) / psi -
-      rowSums( yy[,,2] * (1 - zz[,1] ) ) / ( 1 - psi ) -
-      ( 1- zz[,1] ) * ( 1 - zz[,2] ) / ( 1 - psi )
+      (rowSums( apply( y1y2 , 1:2 , sum ) ) / psi) +
+      (rowSums( yy[,,1] * (1 - zz[,2] ) ) / psi) -
+      (rowSums( yy[,,2] * (1 - zz[,1] ) ) / ( 1 - psi )) -
+      ((( 1- zz[,1] ) * ( 1 - zz[,2] )) / ( 1 - psi ))
 
     # Calculate jacobian for estimating the variance of psi parameters
-    jpsi <- - sum( Nij ) / psi^2 - sum( Ri ) / psi^2 - sum( Cj ) / ( 1 - psi )^2 - M / ( 1 - psi )^2
+    jpsi <- - (sum( Nij ) / psi^2) - (sum( Ri ) / psi^2) - (sum( Cj ) / (( 1 - psi )^2)) - (M / (( 1 - psi )^2))
 
     # divide u_psi by the jacobian
     u_psi <- u_psi / jpsi
@@ -531,16 +521,16 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     u_rho <- array( 0 , dim = c( nrow(xx) , nrow( Nij ) ) )
     for ( j in seq_len( nrow( Nij ) ) ) {
       u_rho[,j] <-
-        yy[,j,2] * rowSums( yy[,,1] ) / rho[j] -
-        rowSums( sweep( ( 1 - zz[,2] ) * yy[,,1] , 2 ,  pij[,j] / rowSums( rhocpij ) , "*" ) )
+        ( ( yy[,j,2] *rowSums( yy[,,1] ) ) / rho[j] ) -
+        rowSums( sweep( ( 1 - zz[,2] ) * yy[,,1] , 2 ,  (nipij[,j] / rowSums( rhocnipij )) , "*" ) )
     }
 
     # Calculate jacobian for estimating the variance of rho parameters
     jrho <- vector( "numeric" , length = nrow( Nij ) )
     for ( j in seq_len( nrow( Nij ) ) ) {
       jrho[j] <-
-        - sum( Nij[,j] ) / rho[j]^2 -
-        sum( Ri * pij[,j]^2 / rowSums( rhocpij )^2 )
+        - (sum( Nij[,j] ) / (rho[j]^2)) +
+        sum( (Ri * (nipij[,j]^2)) / (rowSums( rhocnipij )^2) )
     }
 
     # divide u_rho by the jacobian
@@ -552,15 +542,15 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     u_tau <- array( 0 , dim = c( nrow(xx) , nrow( Nij ) ) )
     for ( j in seq_len( nrow( Nij ) ) ) {
       u_tau[,j] <-
-        - yy[,j,2] * ( 1 - zz[,1] ) / ( 1 - tau[j] ) +
-        ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * sum( nipij[,j] ) / sum( taunipij )
+        - (yy[,j,2] *( ( 1 - zz[,1] ) / ( 1 - tau[j] ))) +
+        (( 1 - zz[,1] ) * ( 1 - zz[,2] )) * (sum( nipij[,j] ) / sum( taunipij ))
     }
 
     # Calculate jacobian for estimating the variance of tau parameters
     jtau <- vector( "numeric" , length = nrow( Nij ) )
     for ( j in seq_len( nrow( Nij ) ) ) {
       jtau[j] <-
-        - Cj[j] / ( 1 - tau[j] )^2 - M * sum( nipij[,j] )^2 / sum( taunipij )^2
+        - (Cj[j] / (( 1 - tau[j] )^2)) - M * ((sum( nipij[,j] )^2) / (sum( taunipij )^2))
     }
 
     # divide u_tau by the jacobian
@@ -572,20 +562,20 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     u_eta <- array( 0 , dim = c( nrow(xx) , nrow( Nij ) ) )
     for ( i in seq_len( nrow( Nij ) ) ) {
       u_eta[,i] <-
-        yy[,i,1] * rowSums( yy[,,2] ) / eta[i] +
-        yy[,i,1] * ( 1 - zz[,2] ) / eta[i] +
+        ((yy[,i,1] * rowSums( yy[,,2] )) / eta[i]) +
+        ( (yy[,i,1] * ( 1 - zz[,2] ) ) * (rowSums( rhocpij ) / rowSums( rhocnipij ))[i] ) +
         rowSums( sweep( yy[,,2] * (1 - zz[,1] ) , 2 , pij[i,] / colSums( nipij ) , "*" ) ) +
-        ( 1- zz[,1] ) * ( 1 - zz[,2] ) * ( rowSums( taupij )[i] / sum( taunipij ) ) - 1
+        (( 1- zz[,1] ) * ( 1 - zz[,2] )) * ( rowSums( taupij )[i] / sum( taunipij ) ) - 1
     }
 
     # Calculate jacobian for estimating the variance of eta parameters
     jeta <- vector( "numeric" , length = nrow( Nij ) )
     for ( i in seq_len( nrow( Nij ) ) ) {
       jeta[i] <-
-        - sum( Nij[i,] ) / eta[i]^2 -
-        Ri[i] / eta[i]^2 -
-        sum( Cj * pij[i,]^2 / colSums( nipij )^2 ) -
-        M * rowSums( taupij )[i]^2 / sum( taunipij )^2
+        - (sum( Nij[i,] ) / eta[i]^2) -
+        (Ri[i] / (( rowSums(rhocpij)^2 / rowSums( rhocnipij )^2 )[i]) ) -
+        sum( Cj * (pij[i,]^2 / colSums( nipij )^2) ) -
+        M * ((rowSums( taupij )[i]^2) / (sum( taunipij )^2))
     }
 
     # divide u_eta by the jacobian

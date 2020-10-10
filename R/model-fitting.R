@@ -1,5 +1,5 @@
 # function for model fitting
-ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
+ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALSE ) {
 
   # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
   Ri <- CountMatrix[ , ncol(CountMatrix) ][ - nrow( CountMatrix ) ]
@@ -7,6 +7,9 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
   M <- CountMatrix[ nrow( CountMatrix ) , ncol( CountMatrix ) ]
   Nij <- as.matrix( CountMatrix[ -nrow( CountMatrix ) , -ncol( CountMatrix ) ] )
   N  <- sum( Nij ) + sum( Ri ) + sum( Cj ) + M
+
+  # set tolerance
+  tol <- 1/N
 
   # fix zero probabilities
   if ( M == 0 ) {
@@ -33,7 +36,12 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
   # number of restrictions
   n.restr <- k+1
 
-  # adjusts using onde of the models
+  # initial settings for iterations
+  maxdiff <- 1
+  v <- 0
+  this.step <- 1 # for tau in model D
+
+  # adjusts using one of the models
   mfit <- switch( model , MCAR = {
 
     # MCAR estimation
@@ -69,8 +77,6 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
     # eta and pij according to Result 4.3 of Rojas (2014, p.45)
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
-    maxdiff <- Inf
-    v = 0
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
     # eta and pij according to Result 4.3 of Rojas (2014, p.41)
@@ -98,8 +104,11 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
-      # test for convergence
-      if ( maxdiff < tol ) break()
+      # test for non-convergence
+      if ( v >= maxit ) {
+        stop( "Algorithm has not converged after " , v , " iterations." )
+        break()
+      }
 
       # store estimates for next iteration
       eta0 <- etav
@@ -132,16 +141,15 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
     tau <- M / ( sum( Cj ) + M )
 
     # Obtain starting values for estimating superpopulation model flow parameters
-    # psii, eta and pij according to Result 4.8 of Rojas (2014, p.49)
-    # psii0 <- psiiv <- rep( sum( Nij ) + sum( Ri ) , nrow( Nij ) ) / N
-    psii0 <- psiiv <- rep( ( sum( Nij ) + sum( Ri ) ) / N , nrow( Nij ) )
+    # psi, eta and pij according to Result 4.8 of Rojas (2014, p.49)
+    # psi0 <- psiv <- rep( ( sum( Nij ) + sum( Ri ) ) / N , nrow( Nij ) ) # original
+    psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / N # modified #1
+    # psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / ( sum( Nij ) + sum( Ri ) ) # modified #2
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
-    maxdiff <- Inf
-    v = 0
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
-    # psii, eta and pij according to Result 4.8 of Rojas (2014, p.296)
+    # psi, eta and pij according to Result 4.8 of Rojas (2014, p.296)
     while( maxdiff > tol ) {
 
       # count iteration
@@ -149,31 +157,30 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
 
       # calculate auxiliary stats
       nipij <- sweep( pijv , 1 , etav , "*" )
-      psicni <- ( 1 - psiiv ) * etav
-      psicnipij <- sweep( pijv , 1 , psicni , "*" )
-      psicpij <- sweep( pijv , 1 , 1 - psiiv , "*" )
+      psicni <- ( 1 - psiv ) * etav
+      psicnipij <- sweep( nipij , 1 , 1 - psiv , "*" )
 
-      # workingcode
       # calculate eta v+1
       etav <-
         ( rowSums( Nij ) + Ri +
-            rowSums( sweep( sweep( psicnipij , 2 , Cj , "*" ) , 2 , colSums( psicnipij ) , "/" ) ) +
-            ( M * psicni / sum( psicni ) ) ) / N
+            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
+            # ( M * ( rowSums( psicnipij ) / sum( psicnipij ) ) ) ) / N
+            ( M * ( psicni / sum( psicni ) ) ) ) / N
 
       # calculate pij v+1
       pijv <-
-        sweep( Nij + sweep( sweep( psicnipij , 2 , Cj , "*" ) , 2 , colSums( psicnipij ) , "/" ) , 1 ,
-               rowSums( Nij ) + rowSums( sweep( sweep( psicnipij , 2 , Cj , "*" ) , 2 , colSums( psicnipij ) , "/" ) ) , "/" )
+        sweep( Nij + sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) , 1 ,
+               rowSums( Nij ) + rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) , "/" )
 
       # calculate psi
-      psiiv <-
+      psiv <-
         ( rowSums( Nij ) + Ri ) /
         ( rowSums( Nij ) + Ri +
-            rowSums( sweep( sweep( psicnipij , 2 , Cj , "*" ) , 2 , colSums( psicnipij ) , "/" ) ) +
-            ( M * psicni / sum( psicni ) ) )
+            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
+            ( M * ( rowSums( psicnipij ) / sum( psicnipij ) ) ) )
 
       # calculate changes
-      these_diffs <- c( c( psiiv - psii0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
+      these_diffs <- c( c( psiv - psi0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
       # calculate maximum absolute difference
       maxdiff <- max( abs( these_diffs ) )
@@ -181,11 +188,14 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
-      # test for convergence
-      if ( maxdiff < tol ) break()
+      # test for non-convergence
+      if ( v >= maxit ) {
+        stop( "Algorithm has not converged after " , v , " iterations." )
+        break()
+      }
 
       # store estimates for next iteration
-      psii0 <- psiiv
+      psi0 <- psiv
       eta0 <- etav
       pij0 <- pijv
 
@@ -201,7 +211,7 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
         "Ri" = Ri ,
         "Cj" = Cj ,
         "M" = M ,
-        "psi" = psiiv ,
+        "psi" = psiv ,
         "rho" = rho ,
         "tau" = tau ,
         "eta" = etav ,
@@ -218,15 +228,13 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
     rhoi <- rowSums( Nij ) / ( rowSums( Nij ) + Ri )
 
     # Obtain starting values for estimating superpopulation model flow parameters
-    # psii, eta and pij according to Result 4.13 of Rojas (2014, p.62)
+    # psi, eta and pij according to Result 4.13 of Rojas (2014, p.62)
     taui0 <- tauiv <- rep( M / ( sum( Cj ) + M ) , nrow( Nij ) )
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
-    maxdiff <- Inf
-    v = 0
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
-    # psii, eta and pij according to Result 4.8 of Rojas (2014, p.296)
+    # psi, eta and pij according to Result 4.8 of Rojas (2014, p.296)
     while( maxdiff > tol ) {
 
       # count iteration
@@ -234,19 +242,19 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
 
       # calculate auxiliary stats
       nipij <- sweep( pijv , 1 , etav , "*" )
-      nirho <- etav * tauiv
+      nitau <- etav * tauiv
       nipijrhoc <- sweep( nipij , 1 , 1 - tauiv , "*" )
 
       # calculate psi
       tauiv <-
-        ( M * nirho / sum( nirho ) ) /
-        ( rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) ) + M * nirho / sum( nirho ) )
+        ( M * nitau / sum( nitau ) ) /
+        ( rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) ) + M * nitau / sum( nitau ) )
 
       # calculate eta v+1
       etav <-
         ( rowSums( Nij ) + Ri +
             rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) ) +
-            M * ( nirho / sum( nirho ) ) ) / N
+            M * ( nitau / sum( nitau ) ) ) / N
 
       # calculate pij v+1
       pijv <- sweep(
@@ -262,8 +270,11 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
-      # test for convergence
-      if ( maxdiff < tol ) break()
+      # test for non-convergence
+      if ( v >= maxit ) {
+        stop( "Algorithm has not converged after " , v , " iterations." )
+        break()
+      }
 
       # store estimates for next iteration
       taui0 <- tauiv
@@ -303,8 +314,6 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
     tauj0 <- taujv <- rep( M / ( sum( Cj ) + M ) , ncol( Nij ) )
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
-    maxdiff <- Inf
-    v = 0
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
     # rhoj, tauj, eta and pij according to Result 4.17 of Rojas (2014, p.64-65)
@@ -316,17 +325,16 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
       # calculate auxiliary stats
       nipij <- sweep( pijv , 1 , etav , "*" )
       pijrhoc <- sweep( pijv , 2 , 1 - rhojv , "*" )
+      nipijrhoc <- sweep( nipij , 2 , 1 - rhojv , "*" )
       nipijtau <- sweep( nipij , 2 , taujv , "*" )
 
       # calculate rhoj
       rhojv <-
         colSums( Nij ) /
-        ( colSums( Nij ) + colSums( sweep( sweep( pijrhoc , 1 , rowSums( pijrhoc ) , "/" ) , 1 , Ri , "*" ) ) )
+        ( colSums( Nij ) + colSums( sweep( sweep( nipijrhoc , 1 , Ri , "*" ) , 1 , rowSums( nipijrhoc ) , "/" ) ) )
 
-      # calculate tauj
+      # calculate tauj #1
       taujv <- 1 - ( Cj * sum( nipijtau ) ) / ( M * colSums( nipij ) ) # Stasny
-      # taujv <- ( M * colSums( nipij ) - Cj * sum( nipijtau ) ) / ( ( M + Cj ) * colSums( nipij ) ) # Andrés & Hanwen
-      # taujv <- ( M / ( Cj + M ) ) - ( Cj * sum( nipijtau ) ) / ( ( Cj + M ) * colSums( nipij ) )
 
       # calculate eta
       etav <-
@@ -346,6 +354,10 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
             rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) +
             M * rowSums( nipijtau ) / sum( nipijtau ) , "/" )
 
+      # check value consistency #3
+      while ( max( abs( taujv - tauj0 ) ) > this.step ) taujv <- ( taujv + tauj0 ) / 2
+      this.step <- max( abs( taujv - tauj0 ) )
+
       # calculate changes
       these_diffs <- c( c( rhojv - rhoj0 ) , c( taujv - tauj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -355,8 +367,11 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
 
-      # test for convergence
-      if ( maxdiff < tol ) break()
+      # test for non-convergence
+      if ( v >= maxit ) {
+        stop( "Algorithm has not converged after " , v , " iterations." )
+        break()
+      }
 
       # store estimates for next iteration
       rhoj0 <- rhojv
@@ -369,6 +384,7 @@ ipf <- function( CountMatrix , model , tol = 1e-8 , verbose = FALSE ) {
     # return final estimates
     res <-
       list(
+        "maxdiff" = maxdiff ,
         "model" = model ,
         "iter" = v ,
         "N" = N ,
