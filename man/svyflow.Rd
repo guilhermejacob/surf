@@ -10,6 +10,7 @@
   design,
   model = c("A", "B", "C", "D"),
   tol = 1e-04,
+  maxit = 1000,
   verbose = FALSE,
   ...
 )
@@ -22,6 +23,8 @@
 \item{model}{model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.}
 
 \item{tol}{Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.}
+
+\item{maxit}{Maximum number of iterations for iterative proportional fitting. Defaults to \code{1000}.}
 
 \item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
 

@@ -7,6 +7,7 @@
 #' @param design  surflow.design object
 #' @param model  model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
 #' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
+#' @param maxit  Maximum number of iterations for iterative proportional fitting. Defaults to \code{1000}.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
 #' @param ...  future expansion.
 #'
@@ -56,7 +57,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , verbose = FALSE , ... ){
+svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 1000 , verbose = FALSE , ... ){
 
   # test values
   model <- match.arg( model , several.ok = FALSE )
@@ -95,7 +96,7 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   }
 
   # model fitting
-  mfit <- ipf( Amat , model = model , tol = tol , verbose = verbose )
+  mfit <- ipf( Amat , model = model , tol = tol , maxit = maxit , verbose = verbose )
 
   # variance estimation
   mvar <- ipf_variance( xx , ww , res = mfit , design = design , rp.variance = TRUE )
