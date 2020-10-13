@@ -185,16 +185,20 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
     for ( i in seq_len( nrow( Nij ) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
       u_pij[,i,j] <- ( y1y2[,i,j] / pij[i,j] ) +
         ( yy[,i,1] * ( 1 - zz[,2] ) ) +
-        ( yy[,j,2] * ( 1 - zz[,1] ) ) * ( eta[i] / colSums( nipij )[j] ) +
+        ( yy[,j,2] * ( 1 - zz[,1] ) ) * ( eta[i] / sum( nipij[,j] ) ) +
         ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i]
     }
 
+    # # Calculate jacobian for estimating the variance of pij parameters
+    # jpij <- array( 0 , dim = c( nrow(Nij) , ncol(Nij) ) )
+    # for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
+    #   # jpij[i,j] <- - Nij[i,j] / pij[i,j]^2 - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2
+    #   jpij[i,j] <- - (Nij[i,j] / (pij[i,j]^2)) - Ri[i] - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2 - M * eta[i]^2
+    # }
+
     # Calculate jacobian for estimating the variance of pij parameters
-    jpij <- array( 0 , dim = c( nrow(Nij) , ncol(Nij) ) )
-    for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
-      # jpij[i,j] <- - Nij[i,j] / pij[i,j]^2 - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2
-      jpij[i,j] <- - (Nij[i,j] / (pij[i,j]^2)) - Ri[i] - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2 - M * eta[i]^2
-    }
+    jpij <- sweep( - Nij / pij^2 , 1 , - Ri - M * eta^2 , "+" )
+    jpij <- jpij - outer( eta^2 , Cj / colSums( nipij )^2 )
 
     # divide u_pij by the jacobian
     u_pij <- sweep( u_pij , 2:3 , jpij , "/" )

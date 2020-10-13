@@ -9,7 +9,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   N  <- sum( Nij ) + sum( Ri ) + sum( Cj ) + M
 
   # set tolerance
-  tol <- 1/N
+  if ( is.null( tol ) ) tol <- 1/N
 
   # fix zero probabilities
   if ( M == 0 ) {
@@ -80,7 +80,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
     # eta and pij according to Result 4.3 of Rojas (2014, p.41)
-    while( maxdiff > tol ) {
+    while( maxdiff >= tol ) {
 
       # count iteration
       v <- v+1
@@ -98,8 +98,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
         sweep( Nij + sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) , 1 ,
                rowSums( Nij ) + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) , "/" )
 
+      # calculate differences
+      these.diffs <- c( etav - eta0 , pijv - pij0 )
+
       # calculate maximum absolute difference
-      maxdiff <- max( abs( c( c( etav - eta0 ) , c( pijv - pij0 ) ) ) )
+      maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
@@ -133,8 +136,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
         "pij" = pijv ,
         "muij" = N * sweep( pijv , 1 , etav , "*" ) ,
         "gamma" = colSums( sweep( pijv , 1 , etav , "*" ) ) )
-  } ,
-  B ={
+  } , B = {
     # Obtain maximum pseudo-likelihood estimates for response model parameters
     # rho, and tau according to Result 4.7 of Rojas (2014, p.46-47)
     rho <- sum( Nij ) / ( sum( Nij ) + sum( Ri ) )
@@ -150,7 +152,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
     # psi, eta and pij according to Result 4.8 of Rojas (2014, p.296)
-    while( maxdiff > tol ) {
+    while( maxdiff >= tol ) {
 
       # count iteration
       v <- v+1
@@ -160,30 +162,36 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       psicni <- ( 1 - psiv ) * etav
       psicnipij <- sweep( nipij , 1 , 1 - psiv , "*" )
 
-      # calculate eta v+1
-      etav <-
-        ( rowSums( Nij ) + Ri +
-            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
-            # ( M * ( rowSums( psicnipij ) / sum( psicnipij ) ) ) ) / N
-            ( M * ( psicni / sum( psicni ) ) ) ) / N
-
-      # calculate pij v+1
-      pijv <-
-        sweep( Nij + sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) , 1 ,
-               rowSums( Nij ) + rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) , "/" )
-
       # calculate psi
       psiv <-
         ( rowSums( Nij ) + Ri ) /
         ( rowSums( Nij ) + Ri +
-            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
-            ( M * ( rowSums( psicnipij ) / sum( psicnipij ) ) ) )
+            rowSums( sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) +
+            ( M * ( psicni / sum( psicni ) ) ) )
 
-      # calculate changes
-      these_diffs <- c( c( psiv - psi0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
+      # calculate eta v+1
+      etav <-
+        ( rowSums( Nij ) + Ri +
+            rowSums( sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) +
+            ( M * ( psicni / sum( psicni ) ) ) ) / N
+
+      # calculate pij v+1
+      pijv <-
+        sweep( Nij + sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) , 1 ,
+               rowSums( Nij + sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) , "/" )
+
+      # # check value consistency #3
+      # psiv <- ( psiv + psi0 ) / 2
+      # etav <- ( etav + eta0 ) / 2
+      # pijv <- ( pijv + pij0 ) / 2
+      # while ( max( abs( psiv - psi0 ) ) > this.step ) psiv <- ( psiv + psi0 ) / 2
+      # this.step <- max( abs( psiv - psi0 ) )
+
+      # calculate differences
+      these.diffs <- c( c( psiv - psi0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
       # calculate maximum absolute difference
-      maxdiff <- max( abs( these_diffs ) )
+      maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
@@ -235,7 +243,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
     # psi, eta and pij according to Result 4.8 of Rojas (2014, p.296)
-    while( maxdiff > tol ) {
+    while( maxdiff >= tol ) {
 
       # count iteration
       v <- v+1
@@ -261,11 +269,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
         Nij + sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) , 1 ,
         rowSums( Nij ) + rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) ) , "/" )
 
-      # calculate changes
-      these_diffs <- c( c( tauiv - taui0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
+      # calculate differences
+      these.diffs <- c( c( tauiv - taui0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
       # calculate maximum absolute difference
-      maxdiff <- max( abs( these_diffs ) )
+      maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
@@ -317,7 +325,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
     # Obtain maximum pseudo-likelihood estimates for superpopulation model flow parameters
     # rhoj, tauj, eta and pij according to Result 4.17 of Rojas (2014, p.64-65)
-    while( maxdiff > tol ) {
+    while( maxdiff >= tol ) {
 
       # count iteration
       v <- v+1
@@ -358,11 +366,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       while ( max( abs( taujv - tauj0 ) ) > this.step ) taujv <- ( taujv + tauj0 ) / 2
       this.step <- max( abs( taujv - tauj0 ) )
 
-      # calculate changes
-      these_diffs <- c( c( rhojv - rhoj0 ) , c( taujv - tauj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
+      # calculate differences
+      these.diffs <- c( c( rhojv - rhoj0 ) , c( taujv - tauj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
       # calculate maximum absolute difference
-      maxdiff <- max( abs( these_diffs ) )
+      maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
       if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
