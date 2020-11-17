@@ -27,7 +27,6 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
   # number of model parameters
   switch( model ,
-          MCAR = { n.parms <- k^2 + k } ,
           A = { n.parms <- k^2 +   k + 3 } ,
           B = { n.parms <- k^2 + 2*k + 2 } ,
           C = { n.parms <- k^2 + 3*k + 1 } ,
@@ -42,31 +41,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   this.step <- 1 # for tau in model D
 
   # adjusts using one of the models
-  mfit <- switch( model , MCAR = {
-
-    # MCAR estimation
-    eta <- rowSums( Nij ) / sum( Nij )
-    pij <- Nij / rowSums( Nij )
-
-    # return final estimates
-    res <-
-      list(
-        "model" = model ,
-        "iter" = NA ,
-        "N" = N ,
-        "Nij" = Nij ,
-        "Ri" = Ri ,
-        "Cj" = Cj ,
-        "M" = M ,
-        "psi" = NA ,
-        "rho" = NA ,
-        "tau" = NA ,
-        "eta" = eta ,
-        "pij" = pij ,
-        "muij" = N * sweep( pij , 1 , eta , "*" ) ,
-        "gamma" = colSums( sweep( pij , 1 , eta , "*" ) ) )
-
-  } , A = {
+  mfit <- switch( model , A = {
     # Obtain maximum pseudo-likelihood estimates for response model parameters
     # psi, rho, and tau according to Result 4.2 of Rojas (2014, p.38)
     psi <- ( sum( Nij ) + sum( Ri ) ) / N
@@ -105,7 +80,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -194,7 +169,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -269,6 +244,9 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
         Nij + sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) , 1 ,
         rowSums( Nij ) + rowSums( sweep( sweep( nipijrhoc , 2 , colSums( nipijrhoc ) , "/" ) , 2 , Cj , "*" ) ) , "/" )
 
+      # check value consistency
+      while ( any( tauiv < 0 | tauiv > 1 ) ) tauiv <- ( tauiv + taui0 ) / 2
+
       # calculate differences
       these.diffs <- c( c( tauiv - taui0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
@@ -276,7 +254,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -319,7 +297,9 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
     # Obtain starting values for estimating superpopulation model flow parameters
     # rhoj, tauj, eta and pij
     rhoj0 <- rhojv <- rep( sum( Nij ) / ( sum( Nij ) + sum( Ri ) ) , ncol( Nij ) )
-    tauj0 <- taujv <- rep( M / ( sum( Cj ) + M ) , ncol( Nij ) )
+    # tauj0 <- taujv <- rep( M / ( sum( Cj ) + M ) , ncol( Nij ) )
+    tauj0 <- taujv <- ( M / ( Cj + M ) )
+    # tauj0 <- taujv <- runif( ncol( Nij ) , .05 , .95 )
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
 
@@ -341,8 +321,9 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
         colSums( Nij ) /
         ( colSums( Nij ) + colSums( sweep( sweep( nipijrhoc , 1 , Ri , "*" ) , 1 , rowSums( nipijrhoc ) , "/" ) ) )
 
-      # calculate tauj #1
+      # calculate tauj #2
       taujv <- 1 - ( Cj * sum( nipijtau ) ) / ( M * colSums( nipij ) ) # Stasny
+      # taujv <- ( M * colSums( nipij ) - Cj * ( sum( nipijtau ) - colSums( nipijtau ) ) ) / ( ( M + Cj ) * colSums( nipij ) ) # Hanwen & Andrés
 
       # calculate eta
       etav <-
@@ -362,9 +343,27 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
             rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) +
             M * rowSums( nipijtau ) / sum( nipijtau ) , "/" )
 
-      # check value consistency #3
-      while ( max( abs( taujv - tauj0 ) ) > this.step ) taujv <- ( taujv + tauj0 ) / 2
-      this.step <- max( abs( taujv - tauj0 ) )
+      # # check value consistency #1
+      # while ( any( c( rhojv , taujv ) < 0 | c( rhojv , taujv ) > 1 ) ) {
+      #   rhojv <- ( rhojv + rhoj0 ) / 2
+      #   taujv <- ( taujv + tauj0 ) / 2
+      #   etav <- ( etav + eta0 ) / 2
+      #   pijv <- ( pijv + pij0 ) / 2
+      # }
+
+      # check value consistency #2
+      while ( any( rhojv < 0 | rhojv > 1 ) ) rhojv <- ( rhojv + rhoj0 ) / 2
+      while ( any( taujv < 0 | taujv > 1 ) ) taujv <- ( taujv + tauj0 ) / 2
+
+      # # check value consistency #3
+      # while ( max( abs( taujv - tauj0 ) ) > this.step ) taujv <- ( taujv + tauj0 ) / 2
+      # this.step <- max( abs( taujv - tauj0 ) )
+
+      # damping
+      rhojv <- ( rhojv + rhoj0 ) / 2
+      taujv <- ( taujv + tauj0 ) / 2
+      etav <- ( etav + eta0 ) / 2
+      pijv <- ( pijv + pij0 ) / 2
 
       # calculate differences
       these.diffs <- c( c( rhojv - rhoj0 ) , c( taujv - tauj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
@@ -373,7 +372,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::number( maxdiff , accuracy = tol ) , "\r" )
+      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -392,7 +391,6 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
     # return final estimates
     res <-
       list(
-        "maxdiff" = maxdiff ,
         "model" = model ,
         "iter" = v ,
         "N" = N ,
@@ -419,50 +417,60 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   # return mcar
   if ( model == "MCAR" ) return( mfit )
 
+  ### expected proportions under the model
+  estimated.props <- if ( model == "A" ) {
+    cbind( rbind( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * res[["rho"]] ,
+                  colSums( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) * ( 1 - res[["tau"]] ) ) ) ,
+           c( rowSums( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * ( 1 - res[["rho"]] ) ) ,
+              sum( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) *  res[["tau"]] ) ) )
+  } else if ( model == "B" ) {
+    cbind( rbind( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * res[["rho"]] ,
+                  colSums( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) * ( 1 - res[["tau"]] ) ) ) ,
+           c( rowSums( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * ( 1 - res[["rho"]] ) ) ,
+              sum( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) *  res[["tau"]] ) ) )
+  } else if ( model == "C" ) {
+    cbind( rbind( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 1 , res[["rho"]] , "*" ) ,
+                  colSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 1 , 1 - res[["tau"]] , "*" ) ) ) ,
+           c( rowSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 1 , 1 - res[["rho"]] , "*" ) ) ,
+              sum( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 1 , res[["tau"]] , "*" ) ) ) )
+  } else if ( model == "D" ) {
+    cbind( rbind( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 2 , res[["rho"]] , "*" ) ,
+                  colSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 2 , 1 - res[["tau"]] , "*" ) ) ) ,
+           c( rowSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 2 , 1 - res[["rho"]] , "*" ) ) ,
+              sum( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 2 , res[["tau"]] , "*" ) ) ) )
+  }
+  dimnames( estimated.props ) <- dimnames( CountMatrix )
+
+  # test value
+  stopifnot( all.equal( sum( estimated.props ) , 1 ) )
+
   ### log pseudo-likelihood
-  nipij <- sweep( pijv , 1 , etav , "*" )
-  psirho <- res[["psi"]] * res[["rho"]]
-  psirhoc <- res[["psi"]] * ( 1 - res[["rho"]] )
-  psictauc <- ( 1 - res[["psi"]] ) * ( 1 - res[["tau"]] )
-  psictau <- ( 1 - res[["psi"]] ) * res[["tau"]]
-  switch( model , A = {
-    pll <- sum( Nij * log( psirho * nipij ) , na.rm = TRUE ) +
-      sum( Ri * rowSums( log( psirhoc * nipij ) ) , na.rm = TRUE ) +
-      sum( Cj * colSums( log( psictauc * nipij ) ) , na.rm = TRUE ) +
-      M * log( sum( psictau * nipij , na.rm = TRUE ) )
-  } , B = {
-    pll <- sum( Nij * log( sweep( nipij , 1 , psirho , "*" ) ) , na.rm = TRUE ) +
-      sum( Ri * log( rowSums( sweep( nipij , 1 , psirhoc , "*" ) ) ) , na.rm = TRUE ) +
-      sum( Cj * log( colSums( sweep( nipij , 1 , psictauc , "*" ) ) ) , na.rm = TRUE ) +
-      M * log( sum( sweep( nipij , 1 , psictau , "*" ) , na.rm = TRUE ) )
-  } , C = {
-    pll <- sum( Nij * log( sweep( nipij , 1 , psirho , "*" ) ) , na.rm = TRUE ) +
-      sum( Ri * log( rowSums( sweep( nipij , 1 , psirhoc , "*" ) ) ) , na.rm = TRUE ) +
-      sum( Cj * log( colSums( sweep( nipij , 1 , psictauc , "*" ) ) ) , na.rm = TRUE ) +
-      M * log( sum( sweep( nipij , 1 , psictau , "*" ) , na.rm = TRUE ) )
-  } , D = {
-    pll <- sum( Nij * log( sweep( nipij , 2 , psirho , "*" ) ) , na.rm = TRUE ) +
-      sum( Ri * log( rowSums( sweep( nipij , 2 , psirhoc , "*" ) ) ) , na.rm = TRUE ) +
-      sum( Cj * log( colSums( sweep( nipij , 2 , psictauc , "*" ) ) ) , na.rm = TRUE ) +
-      M * log( sum( sweep( nipij , 2 , psictau , "*" ) , na.rm = TRUE ) )
-  } )
-  mfit[["ll"]] <- pll / N
+  pll <- CountMatrix * log( estimated.props )
+  mfit[["ll"]] <- sum( pll )
 
   ### unadjusted chi-distances
-  observed.props  <- cbind( rbind( mfit$Nij , mfit$Ri ) , c( mfit$Cj , mfit$M ) ) / mfit$N
-  estimated.Nij   <- sweep( mfit$pij , 1 , mfit$rho * mfit$psi * mfit$eta , "*" )
-  estimated.Ri    <- mfit$psi * ( 1 - mfit$rho ) * rowSums( sweep( mfit$pij , 1 , mfit$eta , "*" ) )
-  estimated.Cj    <- ( 1 - mfit$psi ) * ( 1 - mfit$tau ) * colSums( sweep( mfit$pij , 1 , mfit$eta , "*" ) )
-  estimated.M     <- sum( sweep( mfit$pij , 1 , mfit$tau * ( 1 - mfit$psi ) * mfit$eta , "*" ) )
-  estimated.props <- cbind( rbind( estimated.Nij , estimated.Ri ) , c( estimated.Cj , estimated.M ) )
-  chimat <- ( observed.props - estimated.props )^2 / estimated.props
-  dimnames( chimat ) <- NULL
+
+  # store observed counts
+  mfit[["observed.counts"]] <- CountMatrix
 
   # store estimated counts
   mfit[["estimated.counts"]] <- estimated.props * N
 
+  # calculate observed proportions
+  observed.props <- CountMatrix / N
+
+  # store observed counts
+  mfit[["observed.props"]] <- observed.props
+
+  # store estimated counts
+  mfit[["estimated.props"]] <- estimated.props
+
+  # chi-distance matrix
+  chimat <- ( observed.props - estimated.props )^2 / estimated.props
+  mfit[["chimat"]] <- chimat
+
   # calculate unadjusted test score
-  chiscore <- sum( N * chimat )
+  chiscore <- N * sum( chimat )
 
   # store unadjusted chi-square test score
   warn <- options(warn = -1)
@@ -480,9 +488,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   mfit[["unadj.chisq"]]$data.name <- "observed vs. expected counts"
   mfit[["unadj.chisq"]]$method <- "Unadjusted Pearson's Chi-squared test"
 
-  # store countss
+  # store model info
   mfit[["model.info"]] <- c( n.counts , n.restr , n.parms )
-  mfit[["observed.counts"]] <- CountMatrix
+
+  # store maxdiff
+  mfit[["maxdiff"]] <- maxdiff
 
   # return fit
   return( mfit )

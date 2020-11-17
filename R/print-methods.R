@@ -70,23 +70,38 @@ print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
 #' @exportS3Method print flowstat
 print.flowstat <- function( x , ... ) {
 
+  # print model type
   cat( paste0( "Model " , x$model , "\n" ) )
-  cat( paste0( "\nInitial Response Probability" , "\n" ) )
-  print( x[["psi"]] )
-  cat( paste0( "\nRespondent to Respondent Transition Probability" , "\n" ) )
-  print( x[["rho"]] )
-  cat( paste0( "\nNon-Respondent to Non-Respondent Transition Probability" , "\n" ) )
-  print( x[["tau"]] )
+
+  # print estimates of non-response mechanism
+  if ( !is.null( x[["psi"]] ) ){
+    cat( paste0( "\nInitial Response Probability" , "\n" ) )
+    print( x[["psi"]] )
+    cat( paste0( "\nRespondent to Respondent Transition Probability" , "\n" ) )
+    print( x[["rho"]] )
+    cat( paste0( "\nNon-Respondent to Non-Respondent Transition Probability" , "\n" ) )
+    print( x[["tau"]] )
+  }
+
+  # print eta
   # cat( paste0( "\nInitial Distribution" , "\n" ) )
   # print( x[["eta"]] )
+
+  # print gamma
   # cat( paste0( "\nFinal Distribution" , "\n" ) )
   # print( x[["gamma"]] )
+
+  # print gross flows
   cat( paste0( "\nGross Flows" , "\n" ) )
   print.svymstat( x[["muij"]] )
+
+  # print model fit
   if ( !is.null( attr( x , "adj.chisq" ) ) ){
     cat( paste0( "\n" , "\n" ) )
     print( attr( x , "adj.chisq" ) )
   }
+
+  # return
   invisible(x)
 
 }

@@ -88,6 +88,61 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   # estimate counts
   Amat <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
 
+  # non-response cells
+  Nij <- Amat[ -nrow( Amat ) , -ncol( Amat ) ]
+  Ri <- Amat[ , ncol(Amat) ][ - nrow( Amat ) ]
+  Cj <- Amat[ nrow( Amat ) , ][ - ncol( Amat ) ]
+  M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
+
+  # treat full response
+  if ( all( c( Ri , Cj , M ) == 0 ) & any( Nij > 0 ) ) {
+
+    # issue warning
+    warning( "counts show full response. ignoring model.")
+
+    # remove borders from table
+    Amat <- Amat[ -nrow( Amat ) , -ncol( Amat ) ]
+
+    # model fitting
+    mfit <- frf( Amat )
+    mfit$delta <- mfit$gamma - mfit$eta
+
+    # variance estimation
+    mvar <- frf_variance( xx , ww , res = mfit , design = design )
+
+    # build results list
+    res <- sapply( c( "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
+      if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
+        this_stats <- mfit[[z]]
+        attr( this_stats , "var" ) <- mvar[[z]]
+        names( this_stats ) <- if ( length( this_stats ) > 1 ) xlevels else z
+        colnames( attr( this_stats , "var" ) ) <- rownames( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
+        class( this_stats ) <- "svystat"
+        attr( this_stats , "statistic" ) <- z
+      } else if ( z %in% c( "pij" , "muij" ) ) {
+        this_stats <- mfit[[z]]
+        attr( this_stats , "var" ) <- mfit[[z]]
+        attr( this_stats , "var" )[,] <- mvar[[z]][,]
+        class( this_stats ) <- "svymstat"
+        attr( this_stats , "statistic" ) <- z
+      }
+      return(this_stats)
+    } , simplify = FALSE )
+
+    # create final object
+    rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
+    rval$model <- "Full Response"
+    class(rval) <- "flowstat"
+    attr( rval , "formula" )   <- x
+    attr( rval , "has.order" )   <- has.order
+    attr( rval , "iter" )   <- NA
+    attr( rval , "observed.counts" )   <- mfit$observed.counts
+
+    # return final object
+    return( rval )
+
+  }
+
   # test for zero counts
   if ( any( Amat <= 0 ) ) {
     # issue warning
