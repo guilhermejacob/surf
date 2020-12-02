@@ -56,6 +56,11 @@ frf_variance <- function( xx , ww , res , design ) {
   muij <- res[["muij"]]
   nipij <- sweep( pij , 1 , eta , "*" )
 
+  # add missing to non-response mechanism
+  psi <- NA
+  rho <- NA
+  tau <- NA
+
   # linearization of sum_i Nij
 
   # yy array - see Rojas et al. (2014, p.294)

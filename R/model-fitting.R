@@ -39,6 +39,10 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   maxdiff <- 1
   v <- 0
   this.step <- 1 # for tau in model D
+  last.likelihood <- 0
+
+  # define log-likelihood
+  this.loglik <- switch( model , A = pll.modA , B = pll.modB , C = pll.modC , D = pll.modD )
 
   # adjusts using one of the models
   mfit <- switch( model , A = {
@@ -80,7 +84,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -169,7 +173,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -254,7 +258,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -371,8 +375,12 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # calculate maximum absolute difference
       maxdiff <- max( abs( these.diffs ) )
 
+      # calculate pseudo-likelihood
+      iter.likelihood <- this.loglik( psi , rhojv , taujv , etav , pijv , CountMatrix )
+      delta.likelihood <- iter.likelihood - last.likelihood
+
       # process tracker
-      if (verbose) cat( "iteration: " , stringr::str_pad( v , width = 4 , pad = " " , side = "left" ) , "\t maxdiff: " , scales::scientific( maxdiff , digits = 2 ) , "\r" )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -385,6 +393,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       tauj0 <- taujv
       eta0 <- etav
       pij0 <- pijv
+      last.likelihood <- iter.likelihood
 
     }
 
@@ -496,6 +505,30 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
   # return fit
   return( mfit )
+
+}
+
+# pseudo-likelihood function
+pll.modA <- function( psi , rho , tau , eta , pij , CountVector ) {
+
+  # rebuild matrices
+  pij <- matrix( pij , nrow = sqrt( length( pij ) ) , byrow = TRUE )
+  CountMatrix <- matrix( CountVector , nrow = sqrt( length( CountVector ) ) , byrow = TRUE )
+
+  # intermediate computations
+  nipij <- sweep( pij , 1 , eta , "*" )
+
+  # matrix blocks
+  Part.Nij <- sweep( nipij , 1 , psi , "*" ) * rho
+  Part.Cj <- colSums( nipij * ( 1 - psi ) * ( 1 - tau ) )
+  Part.Ri <- rowSums( nipij * psi * ( 1 - rho ) )
+  Part.M <- sum( nipij * ( 1 - psi ) *  tau )
+
+  # build matrix
+  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+
+  # evaluate
+  sum( CountMatrix * expected.props )
 
 }
 

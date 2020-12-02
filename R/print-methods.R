@@ -10,7 +10,6 @@ print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
   attr( cmat , "statistic" ) <- NULL
   attr( cmat , "class" ) <- NULL
 
-
   # collect standard-errors, variance, and cv
   vmat <- attr( x , "var" )
   semat <- sqrt( vmat )
@@ -24,23 +23,24 @@ print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
 
   # format output
   cmat <- format( cmat[,] ,
-                  digits = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
-                  nsmall = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
+                  digits = ifelse( attr( x , "statistic" ) == "muij" , 0 , 4 ) ,
+                  nsmall = ifelse( attr( x , "statistic" ) == "muij" , 0 , 4 ) ,
                   scientific = FALSE ,
                   trim = FALSE ,
-                  justify = "centre" , drop0trailing = FALSE )
+                  drop0trailing = FALSE ,
+                  justify = "right" )
   semat <- format( semat[,] ,
                    digits = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
                    nsmall = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
                    scientific = FALSE ,
                    trim = FALSE ,
-                   justify = "centre" , drop0trailing = TRUE )
+                   justify = "right" , drop0trailing = TRUE )
   cvmat <- format( cvmat[,] ,
                    digits = 2 ,
                    nsmall = 2 ,
                    scientific = FALSE ,
                    trim = FALSE ,
-                   justify = "centre" , drop0trailing = FALSE )
+                   justify = "right" , drop0trailing = FALSE )
 
   # get header
   if ( attr( x , "statistic" ) == "muij" ) opheader <- "gross flows" else if ( attr( x , "statistic" ) == "pij" ) opheader <- "transition probabilities"

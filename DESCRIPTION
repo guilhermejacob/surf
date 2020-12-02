@@ -14,9 +14,7 @@ Depends:
     Matrix
 Imports:
     MASS,
-    abind,
-    scales,
-    stringr
+    abind
 License: GPL-3
 LazyData: true
 Suggests:
