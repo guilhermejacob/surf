@@ -1,9 +1,6 @@
 # function for model variance calculation
 ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
 
-  # # load objects
-  # for ( this_obj in names( res ) ) assign( this_obj , res[[this_obj]] )
-
   # load objects
   Nij <- res[["Nij"]]
   Ri <- res[["Ri"]]
@@ -188,13 +185,6 @@ ipf_variance <- function( xx , ww , res , design , rp.variance = TRUE ) {
         ( yy[,j,2] * ( 1 - zz[,1] ) ) * ( eta[i] / sum( nipij[,j] ) ) +
         ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * eta[i]
     }
-
-    # # Calculate jacobian for estimating the variance of pij parameters
-    # jpij <- array( 0 , dim = c( nrow(Nij) , ncol(Nij) ) )
-    # for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
-    #   # jpij[i,j] <- - Nij[i,j] / pij[i,j]^2 - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2
-    #   jpij[i,j] <- - (Nij[i,j] / (pij[i,j]^2)) - Ri[i] - Cj[j] * eta[i]^2 / colSums( nipij )[j]^2 - M * eta[i]^2
-    # }
 
     # Calculate jacobian for estimating the variance of pij parameters
     jpij <- sweep( - Nij / pij^2 , 1 , - Ri - M * eta^2 , "+" )
