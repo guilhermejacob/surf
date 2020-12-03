@@ -1,5 +1,8 @@
 # function for model fitting
-ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALSE ) {
+ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALSE , keep.info = FALSE ) {
+
+  # limit fitting algorithm information matrix
+  if( is.infinite( maxit ) ) keep.info <- FALSE
 
   # Obtain sample estimates of population flows as described in table 3.1 of Rojas et al. (2014)
   Ri <- CountMatrix[ , ncol(CountMatrix) ][ - nrow( CountMatrix ) ]
@@ -37,6 +40,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
   # define log-likelihood
   this.loglik <- switch( model , A = pll.modA , B = pll.modB , C = pll.modC , D = pll.modD )
+
+  # create algorithm info
+  if ( keep.info ) {
+    info.mat <- matrix( as.numeric( NA ) , ncol = n.parms + 3 , nrow = maxit )
+  }
 
   # initial settings for iterations
   maxdiff <- 1
@@ -90,6 +98,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
       # process tracker
       if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+
+      # store fitting information
+      if ( keep.info ) {
+        info.mat[ v , ] <- c( "iter" = v , psi , rho , tau , etav , pijv , "maxdiff" = maxdiff , "pll" = iter.loglik )
+      }
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -187,6 +200,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # process tracker
       if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
+      # store fitting information
+      if ( keep.info ) {
+        info.mat[ v , ] <- c( v , psiv , rho , tau , etav , pijv , maxdiff , iter.loglik )
+      }
+
       # test for non-convergence
       if ( v >= maxit ) {
         stop( "Algorithm has not converged after " , v , " iterations." )
@@ -278,6 +296,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
       # process tracker
       if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+
+      # store fitting information
+      if ( keep.info ) {
+        info.mat[ v , ] <- c( v , psi , rhoi , tauiv , etav , pijv , maxdiff , iter.loglik )
+      }
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -395,6 +418,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
       # process tracker
       if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+
+      # store fitting information
+      if ( keep.info ) {
+        info.mat[ v , ] <- c( v , psi , rhojv , taujv , etav , pijv , maxdiff , iter.loglik )
+      }
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -517,32 +545,14 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   # store maxdiff
   mfit[["maxdiff"]] <- maxdiff
 
+  # store fitting information
+  if ( keep.info ) {
+    mfit[["info.mat"]] <- info.mat[ !is.na( info.mat[,1] ) , ]
+  }
+
   # return fit
   return( mfit )
 
 }
 
-# pseudo-likelihood function
-pll.modA <- function( psi , rho , tau , eta , pij , CountVector ) {
-
-  # rebuild matrices
-  pij <- matrix( pij , nrow = sqrt( length( pij ) ) , byrow = TRUE )
-  CountMatrix <- matrix( CountVector , nrow = sqrt( length( CountVector ) ) , byrow = TRUE )
-
-  # intermediate computations
-  nipij <- sweep( pij , 1 , eta , "*" )
-
-  # matrix blocks
-  Part.Nij <- sweep( nipij , 1 , psi , "*" ) * rho
-  Part.Cj <- colSums( nipij * ( 1 - psi ) * ( 1 - tau ) )
-  Part.Ri <- rowSums( nipij * psi * ( 1 - rho ) )
-  Part.M <- sum( nipij * ( 1 - psi ) *  tau )
-
-  # build matrix
-  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
-
-  # evaluate
-  sum( CountMatrix * expected.props )
-
-}
 
