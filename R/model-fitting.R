@@ -35,14 +35,14 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   # number of restrictions
   n.restr <- k+1
 
+  # define log-likelihood
+  this.loglik <- switch( model , A = pll.modA , B = pll.modB , C = pll.modC , D = pll.modD )
+
   # initial settings for iterations
   maxdiff <- 1
   v <- 0
-  this.step <- 1 # for tau in model D
-  last.likelihood <- 0
-
-  # define log-likelihood
-  this.loglik <- switch( model , A = pll.modA , B = pll.modB , C = pll.modC , D = pll.modD )
+  last.loglik <- 0
+  ndig <- ceiling( -log(tol,10) ) + 2
 
   # adjusts using one of the models
   mfit <- switch( model , A = {
@@ -83,8 +83,13 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # calculate maximum absolute difference
       maxdiff <- max( abs( these.diffs ) )
 
+      # calculate pseudo-likelihood
+      iter.loglik <- this.loglik( psi , rho , tau , etav , pijv , CountMatrix )
+      delta.loglik <- iter.loglik - last.loglik
+      delta.loglik <- delta.loglik / N
+
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -95,6 +100,8 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # store estimates for next iteration
       eta0 <- etav
       pij0 <- pijv
+      last.loglik <- iter.loglik
+
 
     }
 
@@ -172,8 +179,13 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # calculate maximum absolute difference
       maxdiff <- max( abs( these.diffs ) )
 
+      # calculate pseudo-likelihood
+      iter.loglik <- this.loglik( psiv , rho , tau , etav , pijv , CountMatrix )
+      delta.loglik <- iter.loglik - last.loglik
+      delta.loglik <- delta.loglik / N
+
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -185,6 +197,8 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       psi0 <- psiv
       eta0 <- etav
       pij0 <- pijv
+      last.loglik <- iter.loglik
+
 
     }
 
@@ -257,8 +271,13 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # calculate maximum absolute difference
       maxdiff <- max( abs( these.diffs ) )
 
+      # calculate pseudo-likelihood
+      iter.loglik <- this.loglik( psi , rhoi , tauiv , etav , pijv , CountMatrix )
+      delta.loglik <- iter.loglik - last.loglik
+      delta.loglik <- delta.loglik / N
+
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -270,6 +289,8 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       taui0 <- tauiv
       eta0 <- etav
       pij0 <- pijv
+      last.loglik <- iter.loglik
+
 
     }
 
@@ -294,6 +315,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   } ,
   D = {
 
+    # issue about results
+    if( any( M <= Cj ) ) {
+      warning( "Cj > M: tau estimates for model D might be wrong." , call. = FALSE , immediate. = TRUE )
+    }
+
     # Obtain maximum pseudo-likelihood estimates for response model parameters
     # rho, and tau according to Result 4.16 of Rojas (2014, p.63)
     psi <- ( sum( Nij ) + sum( Ri ) ) / ( sum( Nij ) + sum( Ri ) + sum( Cj ) +M )
@@ -301,9 +327,8 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
     # Obtain starting values for estimating superpopulation model flow parameters
     # rhoj, tauj, eta and pij
     rhoj0 <- rhojv <- rep( sum( Nij ) / ( sum( Nij ) + sum( Ri ) ) , ncol( Nij ) )
-    # tauj0 <- taujv <- rep( M / ( sum( Cj ) + M ) , ncol( Nij ) )
-    tauj0 <- taujv <- ( M / ( Cj + M ) )
-    # tauj0 <- taujv <- runif( ncol( Nij ) , .05 , .95 )
+    # tauj0 <- taujv <- ifelse( M > Cj , 1 - Cj / M , M / ( M + Cj ) )
+    tauj0 <- taujv <- M / ( M + Cj )
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
 
@@ -325,9 +350,9 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
         colSums( Nij ) /
         ( colSums( Nij ) + colSums( sweep( sweep( nipijrhoc , 1 , Ri , "*" ) , 1 , rowSums( nipijrhoc ) , "/" ) ) )
 
-      # calculate tauj #2
-      taujv <- 1 - ( Cj * sum( nipijtau ) ) / ( M * colSums( nipij ) ) # Stasny
-      # taujv <- ( M * colSums( nipij ) - Cj * ( sum( nipijtau ) - colSums( nipijtau ) ) ) / ( ( M + Cj ) * colSums( nipij ) ) # Hanwen & Andrés
+      # calculate tauj #1
+      # taujv <- 1 - ( Cj * sum( nipijtau ) ) / ( M * colSums( nipij ) ) # Stasny
+      taujv <- ( M * colSums( nipijtau ) / sum( nipijtau ) ) / ( Cj + M * colSums( nipijtau ) / sum( nipijtau ) )
 
       # calculate eta
       etav <-
@@ -347,25 +372,13 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
             rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) +
             M * rowSums( nipijtau ) / sum( nipijtau ) , "/" )
 
-      # # check value consistency #1
-      # while ( any( c( rhojv , taujv ) < 0 | c( rhojv , taujv ) > 1 ) ) {
-      #   rhojv <- ( rhojv + rhoj0 ) / 2
-      #   taujv <- ( taujv + tauj0 ) / 2
-      #   etav <- ( etav + eta0 ) / 2
-      #   pijv <- ( pijv + pij0 ) / 2
-      # }
-
       # check value consistency #2
-      while ( any( rhojv < 0 | rhojv > 1 ) ) rhojv <- ( rhojv + rhoj0 ) / 2
       while ( any( taujv < 0 | taujv > 1 ) ) taujv <- ( taujv + tauj0 ) / 2
-
-      # # check value consistency #3
-      # while ( max( abs( taujv - tauj0 ) ) > this.step ) taujv <- ( taujv + tauj0 ) / 2
-      # this.step <- max( abs( taujv - tauj0 ) )
+      while ( any( rhojv < 0 | rhojv > 1 ) ) rhojv <- ( rhojv + rhoj0 ) / 2
 
       # damping
-      rhojv <- ( rhojv + rhoj0 ) / 2
       taujv <- ( taujv + tauj0 ) / 2
+      rhojv <- ( rhojv + rhoj0 ) / 2
       etav <- ( etav + eta0 ) / 2
       pijv <- ( pijv + pij0 ) / 2
 
@@ -376,11 +389,12 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # calculate pseudo-likelihood
-      iter.likelihood <- this.loglik( psi , rhojv , taujv , etav , pijv , CountMatrix )
-      delta.likelihood <- iter.likelihood - last.likelihood
+      iter.loglik <- this.loglik( psi , rhojv , taujv , etav , pijv , CountMatrix )
+      delta.loglik <- iter.loglik - last.loglik
+      delta.loglik <- delta.loglik / N
 
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s \t maxdiff: %1." , ceiling( -log(tol,10) ) + 2 , "f \r" ) , v , maxdiff ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # test for non-convergence
       if ( v >= maxit ) {
@@ -393,7 +407,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       tauj0 <- taujv
       eta0 <- etav
       pij0 <- pijv
-      last.likelihood <- iter.likelihood
+      last.loglik <- iter.loglik
 
     }
 
