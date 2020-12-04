@@ -352,6 +352,10 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
     rhoj0 <- rhojv <- rep( sum( Nij ) / ( sum( Nij ) + sum( Ri ) ) , ncol( Nij ) )
     # tauj0 <- taujv <- ifelse( M > Cj , 1 - Cj / M , M / ( M + Cj ) )
     tauj0 <- taujv <- M / ( M + Cj )
+    # tauj0 <- taujv <- rep( M / ( sum( Cj ) + M ) , ncol( Nij ) )
+    # tauj0 <- taujv <- if ( all( Cj < M ) ) ( M - Cj ) / M  else ( M - ( sum( Cj ) - Cj ) ) / ( M + Cj )
+    tauj0 <- taujv <- ifelse( M > Cj , 1 - Cj / M , M / ( M + Cj ) )
+    # tauj0 <- taujv <- runif( ncol( Nij ) , .05 , .95 )
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
 
