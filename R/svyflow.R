@@ -151,7 +151,7 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   }
 
   # model fitting
-  mfit <- fitting_fun( Amat , model , tol = tol , maxit = maxit , verbose = verbose , keep.info = FALSE )
+  mfit <- ipf( Amat , model , tol = tol , maxit = maxit , verbose = verbose , keep.info = FALSE )
 
   # variance estimation
   mvar <- variance_fun( xx , ww , res = mfit , design = design )

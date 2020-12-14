@@ -64,7 +64,7 @@ modelD.WVec <- function( theta , CountMatrix ) {
          rowSums( sweep( nipij , 2 , Cj / colSums( nipij ) ,"*" ) ) +
          (M * (rowSums( taunipij ) / sum( taunipij ) )) ) / N
   # lambda2 <- -rowSums( nipij )
-  Wpij <- sweep( Wpij , 2 , N*lambda2 , "+" )
+  Wpij <- sweep( Wpij , 1 , N*lambda2 , "+" )
 
   # build Wvec
   c( Wpsi , Wrho , Wtau , Weta , t( Wpij ) )

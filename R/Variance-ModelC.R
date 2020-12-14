@@ -41,7 +41,7 @@ modelC.WVec <- function( theta , CountMatrix ) {
   Wpsi <- ( sum( Nij ) + sum( Ri ) ) / psi - ( sum( Cj ) + M ) / ( 1- psi )
 
   # rho
-  Wrho <- rowSums( Nij ) / rho - Ri / ( 1 - rho )
+  Wrho <- (rowSums( Nij ) / rho) - (Ri / ( 1 - rho ))
 
   # tau
   Wtau <- - rowSums( sweep( nipij , 2 , Cj / colSums( taucnipij ) , "*" ) ) + M * eta / sum( tauni )
@@ -64,7 +64,7 @@ modelC.WVec <- function( theta , CountMatrix ) {
     -( rowSums( Nij ) + Ri +
          rowSums( sweep( taucnipij , 2 , Cj / colSums( taucnipij ) , "*" ) ) +
          M * tauni / sum( tauni ) ) / N
-  Wpij <- sweep( Wpij , 2 , N*lambda2 , "+" )
+  Wpij <- sweep( Wpij , 1 , N*lambda2 , "+" )
 
   # build Wvec
   c( Wpsi , Wrho , Wtau , Weta , t( Wpij ) )
@@ -178,8 +178,8 @@ modelC.variance <- function( xx , ww , res , design ) {
   # build Umat
   Umat <- do.call( cbind , list( u.psi , u.rho , u.tau , u.eta , u.pij ) )
 
-  # # test equality (within some tolerance)
-  # stopifnot( all.equal( colSums( Umat * ww ) , modelC.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
+  # test equality (within some tolerance)
+  stopifnot( all.equal( colSums( Umat * ww ) , modelC.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
 
   ### calculate jacobian
 
@@ -267,6 +267,7 @@ modelC.variance <- function( xx , ww , res , design ) {
   return( mvar )
 
 }
+
 
 # initial values
 modelC.initial <- function( CountMatrix ) {

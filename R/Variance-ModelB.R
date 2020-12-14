@@ -49,8 +49,9 @@ modelB.WVec <- function( theta , CountMatrix ) {
   # eta
   Weta <-
     ( rowSums( Nij ) + Ri ) / eta +
-    rowSums( sweep( sweep( psicpij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) )
-    (M * (( 1 - psi ) / sum( psicnipij ))) - (N*eta)
+    rowSums( sweep( sweep( psicpij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
+    (M * (( 1 - psi ) / sum( psicnipij )))
+  Weta <- Weta - N
 
   # pij (unrestricted)
   Wpij <- (Nij / pij)
@@ -175,8 +176,8 @@ modelB.variance <- function( xx , ww , res , design ) {
   # build Umat
   Umat <- do.call( cbind , list( u.psi , u.rho , u.tau , u.eta , u.pij ) )
 
-  # # test equality (within some tolerance)
-  # stopifnot( all.equal( colSums( Umat * ww ) , modelB.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
+  # test equality (within some tolerance)
+  stopifnot( all.equal( colSums( Umat * ww ) , modelB.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
 
   ### calculate jacobian
 
