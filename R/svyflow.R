@@ -151,10 +151,10 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   }
 
   # model fitting
-  mfit <- ipf( Amat , model = model , tol = tol , maxit = maxit , verbose = verbose )
+  mfit <- fitting_fun( Amat , model , tol = tol , maxit = maxit , verbose = verbose , keep.info = FALSE )
 
   # variance estimation
-  mvar <- ipf_variance( xx , ww , res = mfit , design = design , rp.variance = TRUE )
+  mvar <- variance_fun( xx , ww , res = mfit , design = design )
 
   # build results list
   res <- sapply( c( "psi" , "rho" , "tau" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
@@ -182,9 +182,6 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
   attr( rval , "iter" )   <- mfit$iter
-  attr( rval , "unadj.chisq" )   <- mfit$unadj.chisq
-  attr( rval , "adj.chisq" )   <- mvar$adj.chisq
-  attr( rval , "observed.counts" )   <- mfit$observed.counts
 
   # return final object
   rval

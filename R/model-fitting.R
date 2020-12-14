@@ -520,29 +520,6 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   # store estimated counts
   mfit[["estimated.props"]] <- estimated.props
 
-  # chi-distance matrix
-  chimat <- ( observed.props - estimated.props )^2 / estimated.props
-  mfit[["chimat"]] <- chimat
-
-  # calculate unadjusted test score
-  chiscore <- N * sum( chimat )
-
-  # store unadjusted chi-square test score
-  warn <- options(warn = -1)
-  mfit[["unadj.chisq"]] <- chisq.test( matrix( 10, ncol = 3 , nrow = 3 ) , correct = FALSE )
-  mfit[["unadj.chisq"]]$statistic[[1]] <- chiscore
-
-  # recalculate p-value
-  if (model %in% c( "A" , "B" ) ) {
-    mfit[["unadj.chisq"]]$parameter[[1]] <- n.counts + n.restr - n.parms
-    mfit[["unadj.chisq"]]$p.value <- pchisq( mfit[["unadj.chisq"]]$statistic , n.counts + n.restr - n.parms , lower.tail = FALSE )
-  } else {
-    mfit[["unadj.chisq"]]$parameter[[1]] <- 0
-    mfit[["unadj.chisq"]]$p.value <-  NA
-  }
-  mfit[["unadj.chisq"]]$data.name <- "observed vs. expected counts"
-  mfit[["unadj.chisq"]]$method <- "Unadjusted Pearson's Chi-squared test"
-
   # store model info
   mfit[["model.info"]] <- c( n.counts , n.restr , n.parms )
 
