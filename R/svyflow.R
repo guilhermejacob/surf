@@ -7,7 +7,7 @@
 #' @param design  surflow.design object
 #' @param model  model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
 #' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
-#' @param maxit  Maximum number of iterations for iterative proportional fitting. Defaults to \code{1000}.
+#' @param maxit  Maximum number of iterations for iterative proportional fitting.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
 #' @param ...  future expansion.
 #'
@@ -57,7 +57,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 1000 , verbose = FALSE , ... ){
+svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , ... ){
 
   # test values
   model <- match.arg( model , several.ok = FALSE )

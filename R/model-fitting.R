@@ -143,9 +143,9 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
     # Obtain starting values for estimating superpopulation model flow parameters
     # psi, eta and pij according to Result 4.8 of Rojas (2014, p.49)
-    # psi0 <- psiv <- rep( ( sum( Nij ) + sum( Ri ) ) / N , nrow( Nij ) ) # original
-    psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / N # modified #1
-    # psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / ( sum( Nij ) + sum( Ri ) ) # modified #2
+    psi0 <- psiv <- rep( ( sum( Nij ) + sum( Ri ) ) / N , nrow( Nij ) ) # original
+    # psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / N # modified #1
+    # psi0 <- psiv <- 1/( 1 + ( Cj + M )/( rowSums( Nij ) + Ri ) ) # modified #2
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
 
@@ -157,34 +157,29 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       v <- v+1
 
       # calculate auxiliary stats
-      nipij <- sweep( pijv , 1 , etav , "*" )
-      psicni <- ( 1 - psiv ) * etav
-      psicnipij <- sweep( nipij , 1 , 1 - psiv , "*" )
+      nipij <- sweep( pij0 , 1 , eta0 , "*" )
+      psicni <- ( 1 - psi0 ) * eta0
+      psicnipij <- sweep( nipij , 1 , 1 - psi0 , "*" )
 
       # calculate psi
       psiv <-
         ( rowSums( Nij ) + Ri ) /
-        ( rowSums( Nij ) + Ri +
-            rowSums( sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) +
+        ( (rowSums( Nij ) + Ri) +
+            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
             ( M * ( psicni / sum( psicni ) ) ) )
 
       # calculate eta v+1
       etav <-
         ( rowSums( Nij ) + Ri +
-            rowSums( sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) +
+            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
             ( M * ( psicni / sum( psicni ) ) ) ) / N
 
       # calculate pij v+1
-      pijv <-
-        sweep( Nij + sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) , 1 ,
-               rowSums( Nij + sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) , "/" )
+      pijv <- Nij + sweep( psicnipij , 2 , Cj/colSums( psicnipij ) , "*" )
+      pijv <- sweep( pijv , 1 , rowSums( pijv ) , "/" )
 
-      # # check value consistency #3
-      # psiv <- ( psiv + psi0 ) / 2
-      # etav <- ( etav + eta0 ) / 2
-      # pijv <- ( pijv + pij0 ) / 2
-      # while ( max( abs( psiv - psi0 ) ) > this.step ) psiv <- ( psiv + psi0 ) / 2
-      # this.step <- max( abs( psiv - psi0 ) )
+      # check value consistency #3
+      psiv <- ( psiv + psi0 ) / 2
 
       # calculate differences
       these.diffs <- c( c( psiv - psi0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
@@ -519,6 +514,29 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
   # store estimated counts
   mfit[["estimated.props"]] <- estimated.props
+
+  # chi-distance matrix
+  chimat <- ( observed.props - estimated.props )^2 / estimated.props
+  mfit[["chimat"]] <- chimat
+
+  # calculate unadjusted test score
+  chiscore <- N * sum( chimat )
+
+  # store unadjusted chi-square test score
+  warn <- options(warn = -1)
+  mfit[["unadj.chisq"]] <- chisq.test( matrix( 10, ncol = 3 , nrow = 3 ) , correct = FALSE )
+  mfit[["unadj.chisq"]]$statistic[[1]] <- chiscore
+
+  # recalculate p-value
+  if (model %in% c( "A" , "B" ) ) {
+    mfit[["unadj.chisq"]]$parameter[[1]] <- n.counts + n.restr - n.parms
+    mfit[["unadj.chisq"]]$p.value <- pchisq( mfit[["unadj.chisq"]]$statistic , n.counts + n.restr - n.parms , lower.tail = FALSE )
+  } else {
+    mfit[["unadj.chisq"]]$parameter[[1]] <- 0
+    mfit[["unadj.chisq"]]$p.value <-  NA
+  }
+  mfit[["unadj.chisq"]]$data.name <- "observed vs. expected counts"
+  mfit[["unadj.chisq"]]$method <- "Unadjusted Pearson's Chi-squared test"
 
   # store model info
   mfit[["model.info"]] <- c( n.counts , n.restr , n.parms )
