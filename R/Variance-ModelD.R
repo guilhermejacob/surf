@@ -185,7 +185,7 @@ modelD.variance <- function( xx , ww , res , design ) {
   ### calculate jacobian
 
   # jacobian matrix
-  Jmat <- numDeriv::jacobian( modelD.WVec , this.theta , method = "complex" , side = NULL , method.args = list() , CountMatrix = Amat )
+  Jmat <- numDeriv::jacobian( modelD.WVec , this.theta , method = "complex" , side = NULL , CountMatrix = Amat )
 
   # inverse of the jacobian matrix
   Jmat.inv <- MASS::ginv( Jmat )
@@ -195,17 +195,17 @@ modelD.variance <- function( xx , ww , res , design ) {
   # full.vmat0 <- Jmat.inv %*% vmat0 %*% t( Jmat.inv )
 
   # calculate variance #2
-  Umat <- t( apply( Umat , 1 , function(z) crossprod( -t( Jmat.inv ) , z ) ) )
-  u.psi <- Umat[ , 1 ]
-  u.rho <- Umat[ , 1+seq_len(K) ]
-  u.tau <- Umat[ , (K+1) + seq_len(K) ]
-  u.eta <- Umat[ , (2*K+2) + seq_len(K) ]
-  u.pij <- Umat[ , 3*K+1 + seq_len(K^2) ]
+  Umat.adj <- t( apply( Umat , 1 , function(z) crossprod( t(Jmat.inv) , z ) ) )
+  u.psi <- Umat.adj[ , 1 ]
+  u.rho <- Umat.adj[ , 1+seq_len(K) ]
+  u.tau <- Umat.adj[ , (K+1) +seq_len(K) ]
+  u.eta <- Umat.adj[ , (2*K+1) + seq_len(K) ]
+  u.pij <- Umat.adj[ , (3*K+1) + seq_len(K^2) ]
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
-  for ( j in seq_len( ncol( Nij ) ) ) {
-    a.pij[,,j] <- u.pij[ , Kmat[ j , ] ]
+  for ( i in seq_len( ncol( Nij ) ) ) {
+    a.pij[,i,] <- u.pij[ , Kmat[ i , ] ]
   }
-  full.vmat <- survey::svyrecvar( sweep( Umat , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  full.vmat <- survey::svyrecvar( sweep( Umat.adj , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   ##### other variances
 
@@ -219,47 +219,51 @@ modelD.variance <- function( xx , ww , res , design ) {
   # nipij.vmat <- matrix( diag( nipij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
 
   # gross flows
-  u.muij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
+  a.muij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
-    u.muij[,i,j] <- nipij[i,j] + N * u.nipij[,i,j]
+    a.muij[,i,j] <- N * u.nipij[,i,j] + nipij[i,j]
   }
-  u.muij <- matrix( u.muij , nrow = dim( u.muij )[1] , byrow = FALSE )
+  u.muij <- matrix( 0 , nrow = dim( a.muij )[1] , ncol = K^2 , byrow = TRUE )
+  for ( i in seq_len( nrow( Nij ) ) ) u.muij[,Kmat[i,]] <- a.muij[,i,]
   muij.vmat <- survey::svyrecvar( sweep( u.muij , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  rm( a.muij )
 
   # final distribution
   u.gamma <- apply( u.nipij , c(1,3) , sum )
+  for ( j in seq_len( nrow( Nij ) ) ) u.gamma[,j] <- rowSums( u.nipij[,,j] )
   gamma.vmat <- survey::svyrecvar( sweep( u.gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   # delta
-  delta <- N * colSums( nipij ) - eta
-  u.delta <- sweep( N * ( u.gamma - u.eta ) , 2 , res[["gamma"]] - res[["eta"]] , "-" )
+  delta <- N * ( colSums( nipij ) - eta )
+  u.delta <- sweep( N * ( u.gamma - u.eta ) , 2 , ( colSums( nipij ) - eta ) , "+" )
   delta.vmat <- survey::svyrecvar( sweep( u.delta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   ##### split full matrix
 
   # non-response
   psi.vmat <- diag( full.vmat )[1]
-  rho.vmat <- full.vmat[ 1+seq_len(K) , 1+seq_len(K) ]
-  tau.vmat <- full.vmat[ (K+1) + seq_len(K) , (K+1) + seq_len(K) ]
+  rho.vmat <- full.vmat[1+seq_len(K),1+seq_len(K)]
+  tau.vmat <- full.vmat[ (K+1) +seq_len(K) , (K+1) + seq_len(K) ]
 
   # unobserved process
-  eta.vmat <- full.vmat[ (2*K+2) + seq_len(K) , (2*K+2) + seq_len(K) ]
-  pij.vmat <- full.vmat[ 3*K+1 + seq_len(K^2) , 3*K+1 + seq_len(K^2) ]
+  eta.vmat <- full.vmat[ (2*K+1) + seq_len(K) , (2*K+1) + seq_len(K) ]
+  pij.vmat <- full.vmat[ (3*K+1) + seq_len(K^2) , (3*K+1) + seq_len(K^2) ]
 
   # collect variances from block diagonal matrix
-  muij.vmat <- matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
-  pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
+  pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
+  muij.vmat <-matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
 
   # build list of variances
   mvar <-
-    list( "psi" = matrix( psi.vmat ) ,
-          "rho" = rho.vmat ,
-          "tau" = tau.vmat ,
-          "eta" = eta.vmat ,
-          "pij" = pij.vmat ,
-          "muij" = muij.vmat ,
-          "gamma" = gamma.vmat ,
-          "delta" = delta.vmat )
+    list(
+      "psi" = matrix( psi.vmat ) ,
+      "rho" = rho.vmat ,
+      "tau" = tau.vmat ,
+      "eta" = eta.vmat ,
+      "pij" = pij.vmat ,
+      "muij" = muij.vmat ,
+      "gamma" = gamma.vmat ,
+      "delta" = delta.vmat )
 
   # return list of variances
   return( mvar )
@@ -389,7 +393,7 @@ modelD.loglik <- function( theta , CountMatrix ) {
   Part.M <- sum( (1 - psi ) * taunipij )
 
   # build matrix
-  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+  expected.props <- rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
 
   # evaluate
   sum( CountMatrix * log( expected.props ) ) # unconstrained
@@ -427,6 +431,6 @@ modelD.expected <- function( theta , K ) {
   Part.M <- sum( (1 - psi ) * taunipij )
 
   # build matrix
-  rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+  rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
 
 }
