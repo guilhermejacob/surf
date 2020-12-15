@@ -18,7 +18,7 @@ modelA.WVec <- function( theta , CountMatrix ) {
   rho <- theta[ 2 ]
   tau <- theta[ 3 ]
   eta <- theta[ 3 + seq_len( K ) ]
-  pij <- theta[ seq( 4 + K , ( 4 + K ) + K^2 - 1 ) ]
+  pij <- theta[ (K+3) + seq_len(K^2) ]
 
   # rebuild matrices
   pij <- matrix( pij , ncol = K , nrow = K , byrow = TRUE )
@@ -154,7 +154,6 @@ modelA.variance <- function( xx , ww , res , design ) {
 
   # build Umat
   Umat <- do.call( cbind , list( u.psi , u.rho , u.tau , u.eta , u.pij ) )
-  rbind( colSums( Umat * ww ) , modelA.WVec( this.theta , Amat ) )
 
   # test equality (within some tolerance)
   stopifnot( all.equal( colSums( Umat * ww ) , modelA.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
@@ -176,8 +175,8 @@ modelA.variance <- function( xx , ww , res , design ) {
   u.psi <- Umat[ , 1 ]
   u.rho <- Umat[ , 2 ]
   u.tau <- Umat[ , 3 ]
-  u.eta <- Umat[ , seq( 4 , 4 + K - 1 ) ]
-  u.pij <- Umat[ , seq( 4 + K , 4 + K + ( K^2 - 1 ) ) ]
+  u.eta <- Umat[ , 3 + seq_len(K) ]
+  u.pij <- Umat[ , (K+3) + seq_len( K^2 ) ]
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( j in seq_len( ncol( Nij ) ) ) {
     a.pij[,,j] <- u.pij[ , Kmat[ j , ] ]
@@ -222,8 +221,8 @@ modelA.variance <- function( xx , ww , res , design ) {
   tau.vmat <- diag( full.vmat )[3]
 
   # unobserved process
-  eta.vmat <- full.vmat[ seq( 4 , 4 + K - 1 ) , seq( 4 , 4 + K - 1 ) ]
-  pij.vmat <- full.vmat[ seq( 4 + K , 4 + K + ( K^2 - 1 ) ) , seq( 4 + K , 4 + K + ( K^2 - 1 ) ) ]
+  eta.vmat <- full.vmat[ 3 + seq_len( K ) , 3 + seq_len( K ) ]
+  pij.vmat <- full.vmat[ (K+3) + seq_len( K^2 ) , (K+3) + seq_len( K^2 ) ]
 
   # collect variances from block diagonal matrix
   muij.vmat <- matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
