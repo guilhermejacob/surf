@@ -13,7 +13,7 @@ pll.modA <- function( psi , rho , tau , eta , pij , CountMatrix ) {
   Part.M <- sum( nipij * ( 1 - psi ) * tau )
 
   # build matrix
-  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+  expected.props <- rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
 
   # evaluate
   sum( CountMatrix * log( expected.props ) ) # unconstrained
@@ -35,7 +35,7 @@ pll.modB <- function( psi , rho , tau , eta , pij , CountMatrix ) {
   Part.M <- sum( psicnipij * tau )
 
   # build matrix
-  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+  expected.props <- rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
 
   # evaluate
   sum( CountMatrix * log( expected.props ) ) # unconstrained
@@ -59,7 +59,7 @@ pll.modC <- function( psi , rho , tau , eta , pij , CountMatrix ) {
   Part.M <- sum( (1 - psi ) * taunipij )
 
   # build matrix
-  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+  expected.props <- rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
 
   # evaluate
   sum( CountMatrix * log( expected.props ) ) # unconstrained
@@ -83,7 +83,7 @@ pll.modD <- function( psi , rho , tau , eta , pij , CountMatrix ) {
   Part.M <- sum( (1 - psi ) * taunipij )
 
   # build matrix
-  expected.props <- rbind( cbind( Part.Nij , Part.Cj ) , c( Part.Ri , Part.M ) )
+  expected.props <- rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
 
   # evaluate
   sum( CountMatrix * log( expected.props ) ) # unconstrained
