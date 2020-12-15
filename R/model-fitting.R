@@ -143,8 +143,8 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
     # Obtain starting values for estimating superpopulation model flow parameters
     # psi, eta and pij according to Result 4.8 of Rojas (2014, p.49)
-    # psi0 <- psiv <- rep( ( sum( Nij ) + sum( Ri ) ) / N , nrow( Nij ) ) # original
-    psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / N # modified #1
+    psi0 <- psiv <- rep( ( sum( Nij ) + sum( Ri ) ) / N , nrow( Nij ) ) # original
+    # psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / N # modified #1
     # psi0 <- psiv <- ( rowSums( Nij ) + Ri ) / ( sum( Nij ) + sum( Ri ) ) # modified #2
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
@@ -157,27 +157,26 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       v <- v+1
 
       # calculate auxiliary stats
-      nipij <- sweep( pijv , 1 , etav , "*" )
-      psicni <- ( 1 - psiv ) * etav
-      psicnipij <- sweep( nipij , 1 , 1 - psiv , "*" )
+      nipij <- sweep( pij0 , 1 , eta0 , "*" )
+      psicni <- ( 1 - psi0 ) * eta0
+      psicnipij <- sweep( nipij , 1 , 1 - psi0 , "*" )
 
       # calculate psi
       psiv <-
         ( rowSums( Nij ) + Ri ) /
-        ( rowSums( Nij ) + Ri +
-            rowSums( sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) +
+        ( (rowSums( Nij ) + Ri) +
+            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
             ( M * ( psicni / sum( psicni ) ) ) )
 
       # calculate eta v+1
       etav <-
         ( rowSums( Nij ) + Ri +
-            rowSums( sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) +
+            rowSums( sweep( sweep( psicnipij , 2 , colSums( psicnipij ) , "/" ) , 2 , Cj , "*" ) ) +
             ( M * ( psicni / sum( psicni ) ) ) ) / N
 
       # calculate pij v+1
-      pijv <-
-        sweep( Nij + sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) , 1 ,
-               rowSums( Nij + sweep( psicnipij , 2 , Cj / colSums( psicnipij ) , "*" ) ) , "/" )
+      pijv <- Nij + sweep( psicnipij , 2 , Cj/colSums( psicnipij ) , "*" )
+      pijv <- sweep( pijv , 1 , rowSums( pijv ) , "/" )
 
       # # check value consistency #3
       # psiv <- ( psiv + psi0 ) / 2
