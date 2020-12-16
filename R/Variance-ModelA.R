@@ -29,13 +29,13 @@ modelA.WVec <- function( theta , CountMatrix ) {
   ##### estimating equations (Binder's W vector)
 
   # psi
-  Wpsi <- ( sum( Nij ) + sum( Ri ) ) / psi - ( sum( Cj ) + M ) / ( 1- psi )
+  Wpsi <- (( sum( Nij ) + sum( Ri ) ) / psi) - (( sum( Cj ) + M ) / ( 1- psi ))
 
   # rho
-  Wrho <- sum( Nij ) / rho - sum( Ri ) / ( 1 - rho )
+  Wrho <- (sum( Nij ) / rho) - (sum( Ri ) / ( 1 - rho ))
 
   # tau
-  Wtau <- - sum( Cj ) / ( 1 - tau ) + M / tau
+  Wtau <- - (sum( Cj ) / ( 1 - tau )) + (M / tau)
 
   # eta
   Weta <-
@@ -54,7 +54,6 @@ modelA.WVec <- function( theta , CountMatrix ) {
     -( rowSums( Nij ) + Ri +
          rowSums( sweep( nipij , 2 , Cj / colSums( nipij ) , "*" ) ) +
          M * eta ) / N
-  lambda2 <- -rowSums( nipij)
   Wpij <- sweep( Wpij , 1 , N*lambda2 , "+" )
 
   # build Wvec
@@ -73,6 +72,7 @@ modelA.variance <- function( xx , ww , res , design ) {
   Ri <- res[["Ri"]]
   Cj <- res[["Cj"]]
   M <- res[["M"]]
+  N <- sum( Amat )
   psi <- res[["psi"]]
   rho <- res[["rho"]]
   tau <- res[["tau"]]
@@ -103,18 +103,18 @@ modelA.variance <- function( xx , ww , res , design ) {
 
   # Calculate scores for estimating the variance of psi parameters
   u.psi <-
-    ( rowSums( apply( y1y2 , c(1,3) , sum ) ) + rowSums( yy[,,1] ) * (1 - zz[,2] ) ) / psi -
-    ( rowSums( yy[,,2] ) * (1 - zz[,1] ) + ( 1- zz[,1] ) * ( 1 - zz[,2] ) ) / ( 1 - psi )
+    (( apply( y1y2 , 1 , sum ) + rowSums( yy[,,1] ) * (1 - zz[,2] ) ) / psi) -
+    (( rowSums( yy[,,2] ) * (1 - zz[,1] ) + ( 1- zz[,1] ) * ( 1 - zz[,2] ) ) / ( 1 - psi ))
 
   ### rho
 
   # Calculate scores for estimating the variance of rho parameters
-  u.rho <- rowSums( apply( y1y2 , c(1,3) , sum ) ) / rho - rowSums( yy[,,1] * ( 1 - zz[,2]) ) / ( 1 - rho )
+  u.rho <- ( apply( y1y2 , 1 , sum ) / rho ) - ( ( rowSums( yy[,,1] ) * ( 1 - zz[,2]) ) / ( 1 - rho ) )
 
   ### tau
 
   # Calculate scores for estimating the variance of tau parameters
-  u.tau <- ( 1 - zz[,1] ) * ( 1 - zz[,2] ) / tau - rowSums( yy[,,2] * ( 1 - zz[,1] ) ) / ( 1 - tau )
+  u.tau <- ( ( 1 - zz[,1] ) * ( 1 - zz[,2] ) / tau ) - ( ( rowSums( yy[,,2] ) * ( 1 - zz[,1] ) ) / ( 1 - tau ) )
 
   ### eta
 
@@ -134,16 +134,18 @@ modelA.variance <- function( xx , ww , res , design ) {
   # Calculate scores for estimating the variance of pij parameters
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( i in seq_len( nrow( Nij ) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
-    a.pij[,i,j] <- a.pij[,i,j] + ( y1y2[,i,j] / pij[i,j] )
-    a.pij[,i,j] <- a.pij[,i,j] + ( ( yy[,i,1] * ( 1 - zz[,2] ) ) / ( rowSums( pij )[i]) )
-    a.pij[,i,j] <- a.pij[,i,j] + (( yy[,j,2] * ( 1 - zz[,1] ) ) * ( (eta[i]) / (colSums( nipij )[j]) ))
-    a.pij[,i,j] <- a.pij[,i,j] + ((( 1 - zz[,1] ) * ( 1 - zz[,2] )) * (eta[i]))
+    a.pij[,i,j] <-
+      ( y1y2[,i,j] / pij[i,j] ) +
+      ( yy[,i,1] * ( 1 - zz[,2] ) ) +
+      ( yy[,j,2] * ( 1 - zz[,1] ) ) * ( (eta[i]) / (colSums( nipij )[j]) ) +
+      ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( (eta[i]) / sum( nipij ) )
   }
+
+  # lambda2 restriction
   lambda2 <-
     -( rowSums( Nij ) + Ri +
          rowSums( sweep( nipij , 2 , Cj / colSums( nipij ) , "*" ) ) +
          M * eta ) / N
-  lambda2 <- -rowSums( nipij )
   a.pij <- sweep( a.pij , 2 , lambda2 , "+" )
 
   # coerce to matrix
@@ -156,7 +158,7 @@ modelA.variance <- function( xx , ww , res , design ) {
   Umat <- do.call( cbind , list( u.psi , u.rho , u.tau , u.eta , u.pij ) )
 
   # test equality (within some tolerance)
-  stopifnot( all.equal( colSums( Umat * ww ) , modelA.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
+  stopifnot( all.equal( colSums( Umat * ww ) , modelA.WVec( this.theta , Amat ) , check.attributes = FALSE , scale = Inf ) )
 
   ### calculate jacobian
 
@@ -171,17 +173,17 @@ modelA.variance <- function( xx , ww , res , design ) {
   # full.vmat0 <- Jmat.inv %*% vmat0 %*% t( Jmat.inv )
 
   # calculate variance #2
-  Umat <- t( apply( Umat , 1 , function(z) crossprod( -t( Jmat.inv ) , z ) ) )
-  u.psi <- Umat[ , 1 ]
-  u.rho <- Umat[ , 2 ]
-  u.tau <- Umat[ , 3 ]
-  u.eta <- Umat[ , 3 + seq_len(K) ]
-  u.pij <- Umat[ , (K+3) + seq_len( K^2 ) ]
+  Umat.adj <- t( apply( Umat , 1 , function(z) crossprod( t(Jmat.inv) , z ) ) )
+  u.psi <- Umat.adj[ , 1 ]
+  u.rho <- Umat.adj[ , 2 ]
+  u.tau <- Umat.adj[ , 3 ]
+  u.eta <- Umat.adj[ , 3 + seq_len(K) ]
+  u.pij <- Umat.adj[ , (K+3) + seq_len(K^2) ]
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
-  for ( j in seq_len( ncol( Nij ) ) ) {
-    a.pij[,,j] <- u.pij[ , Kmat[ j , ] ]
+  for ( i in seq_len( ncol( Nij ) ) ) {
+    a.pij[,i,] <- u.pij[ , Kmat[ i , ] ]
   }
-  full.vmat <- survey::svyrecvar( sweep( Umat , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
+  full.vmat <- survey::svyrecvar( sweep( Umat.adj , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   ##### other variances
 
@@ -197,7 +199,7 @@ modelA.variance <- function( xx , ww , res , design ) {
   # gross flows
   a.muij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
-    a.muij[,i,j] <- nipij[i,j] + N * u.nipij[,i,j]
+    a.muij[,i,j] <- N * u.nipij[,i,j] + nipij[i,j]
   }
   u.muij <- matrix( 0 , nrow = dim( a.muij )[1] , ncol = K^2 , byrow = TRUE )
   for ( i in seq_len( nrow( Nij ) ) ) u.muij[,Kmat[i,]] <- a.muij[,i,]
@@ -206,27 +208,28 @@ modelA.variance <- function( xx , ww , res , design ) {
 
   # final distribution
   u.gamma <- apply( u.nipij , c(1,3) , sum )
+  for ( j in seq_len( nrow( Nij ) ) ) u.gamma[,j] <- rowSums( u.nipij[,,j] )
   gamma.vmat <- survey::svyrecvar( sweep( u.gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   # delta
   delta <- N * ( colSums( nipij ) - eta )
-  u.delta <- sweep( N * ( u.gamma - u.eta ) , 2 , res[["gamma"]] - res[["eta"]] , "+" )
+  u.delta <- sweep( N * ( u.gamma - u.eta ) , 2 , ( colSums( nipij ) - eta ) , "+" )
   delta.vmat <- survey::svyrecvar( sweep( u.delta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   ##### split full matrix
 
   # non-response
-  psi.vmat <- diag( full.vmat )[1]
-  rho.vmat <- diag( full.vmat )[2]
-  tau.vmat <- diag( full.vmat )[3]
+  psi.vmat <- diag(full.vmat)[1]
+  rho.vmat <- diag(full.vmat)[2]
+  tau.vmat <- diag(full.vmat)[3]
 
   # unobserved process
-  eta.vmat <- full.vmat[ 3 + seq_len( K ) , 3 + seq_len( K ) ]
-  pij.vmat <- full.vmat[ (K+3) + seq_len( K^2 ) , (K+3) + seq_len( K^2 ) ]
+  eta.vmat <- full.vmat[ 3 + seq_len(K) , 3 + seq_len(K) ]
+  pij.vmat <- full.vmat[ (K+3) + seq_len(K^2) , (K+3) + seq_len(K^2) ]
 
   # collect variances from block diagonal matrix
-  muij.vmat <- matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
-  pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
+  pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
+  muij.vmat <-matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
 
   # build list of variances
   mvar <-

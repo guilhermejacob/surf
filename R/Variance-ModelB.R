@@ -85,6 +85,7 @@ modelB.variance <- function( xx , ww , res , design ) {
   Ri <- res[["Ri"]]
   Cj <- res[["Cj"]]
   M <- res[["M"]]
+  N <- sum( Amat )
   psi <- res[["psi"]]
   rho <- res[["rho"]]
   tau <- res[["tau"]]
@@ -177,7 +178,7 @@ modelB.variance <- function( xx , ww , res , design ) {
   Umat <- do.call( cbind , list( u.psi , u.rho , u.tau , u.eta , u.pij ) )
 
   # test equality (within some tolerance)
-  stopifnot( all.equal( colSums( Umat * ww ) , modelB.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
+  stopifnot( all.equal( colSums( Umat * ww ) , modelB.WVec( this.theta , Amat ) , check.attributes = FALSE , scale = Inf ) )
 
   ### calculate jacobian
 

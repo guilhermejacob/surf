@@ -81,16 +81,17 @@ modelC.variance <- function( xx , ww , res , design ) {
   K <- sqrt( prod( dim( Amat ) ) ) - 1
   this.theta <- c( unlist( res[ c( "psi" , "rho" , "tau" , "eta" ) ] ) , t( res[[ "pij" ]] ) )
   Nij <- res[["Nij"]]
-  Kmat <- matrix( seq_len( prod( dim( Nij ) ) ) , nrow = nrow( Nij ) , byrow = TRUE )
   Ri <- res[["Ri"]]
   Cj <- res[["Cj"]]
   M <- res[["M"]]
+  N <- sum( Amat )
   psi <- res[["psi"]]
   rho <- res[["rho"]]
   tau <- res[["tau"]]
   eta <- res[["eta"]]
   pij <- res[["pij"]]
   muij <- res[["muij"]]
+  Kmat <- matrix( seq_len( prod( dim( Nij ) ) ) , nrow = nrow( Nij ) , byrow = TRUE )
 
   # yy array - see Rojas et al. (2014, p.294)
   yy <- array( 0  , dim = c( nrow( xx ) , nrow( Nij ) , ncol( xx ) ) )
@@ -180,7 +181,7 @@ modelC.variance <- function( xx , ww , res , design ) {
   Umat <- do.call( cbind , list( u.psi , u.rho , u.tau , u.eta , u.pij ) )
 
   # test equality (within some tolerance)
-  stopifnot( all.equal( colSums( Umat * ww ) , modelC.WVec( this.theta , Amat ) , check.attributes = FALSE ) )
+  stopifnot( all.equal( colSums( Umat * ww ) , modelC.WVec( this.theta , Amat ) , check.attributes = FALSE , scale = Inf ) )
 
   ### calculate jacobian
 
