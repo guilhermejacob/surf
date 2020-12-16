@@ -153,6 +153,16 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   # model fitting
   mfit <- ipf( Amat , model , tol = tol , maxit = maxit , verbose = verbose , keep.info = FALSE )
 
+  # visit proportions
+  interview.number <- data.frame( visit = rep( 1 , length( ww) ) )
+  vVec <- c( stats::xtabs( ww ~ visit , data = interview.number , addNA = TRUE , drop.unused.levels = FALSE ) / sum( ww ) )
+  model.expected <- outer( mfit$estimated.props , vVec )
+
+  # rao-scott adjustment of the chi-square
+  K <- dim( model.expected )[1] - 1
+  n.parms <- switch (model, A = { K^2 + K + 3 } , B = { K^2 + 2*K + 2 } , C = { K^2 + 3*K + 1 } , D = { K^2 + 3*K + 1 } )
+  pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms )
+
   # variance estimation
   mvar <- variance_fun( xx , ww , res = mfit , design = design )
 
@@ -182,6 +192,7 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   attr( rval , "formula" )   <- x
   attr( rval , "has.order" )   <- has.order
   attr( rval , "iter" )   <- mfit$iter
+  attr( rval , "adj.chisq" )   <- pearson
 
   # return final object
   rval

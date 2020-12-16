@@ -39,9 +39,9 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   # delta.value <- ( diag(Vdes) / diag(Vsrs) )[diag(Vsrs) > 0]
 
   # unadjusted chi-square
-  statistic <- smalln * sum( chimat ) / df
+  statistic <- smalln * sum( chimat )
 
-  # calculate deff
+  # calculate generalized deff
   Vdes <- vcov( observed.props )
   Dmat <- diag( obs.vec )
   iDmat <- diag(ifelse(obs.vec == 0, 0, 1/obs.vec))
@@ -55,18 +55,20 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   statistic <- statistic / delta.bar
 
   # second-order correction
-  d0 <- sum(diag(Delta))^2/(sum(diag(Delta %*% Delta)))
-  nu <- degf( design)
+  var.delta <- ( sum( ( delta.value - delta.bar )^2 ) / df )
+  a2 <- var.delta / ( delta.bar^2 )
+  nu <- degf( design )
+  statistic <- statistic / ( 1 +  a2 )
 
   # score
   warn <- options(warn = -1)
   pearson <- chisq.test( apply( obs.mat , 1:2 , sum ) )
   pearson$statistic <- statistic
-  pearson$p.value <- pf( statistic , d0 , d0 * nu , lower.tail = FALSE )
+  pearson$p.value <- pf( statistic , df , df * nu , lower.tail = FALSE )
   attr(pearson$statistic, "names") <- "F"
-  pearson$parameter <- c(ndf = d0, ddf = d0 * nu)
+  pearson$parameter <- c(ndf = df, ddf = df * nu)
   pearson$data.name <- "Expected vs. Observed Proportions"
-  pearson$method <- "Pearson's X^2: Rao & Scott adjustment"
+  pearson$method <- "Pearson's X^2: 2nd order Rao-Scott adjustment"
 
   # return
   pearson
