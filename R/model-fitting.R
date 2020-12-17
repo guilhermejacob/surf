@@ -177,9 +177,6 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       pijv <- Nij + sweep( psicnipij , 2 , Cj/colSums( psicnipij ) , "*" )
       pijv <- sweep( pijv , 1 , rowSums( pijv ) , "/" )
 
-      # check value consistency #3
-      psiv <- ( psiv + psi0 ) / 2
-
       # calculate differences
       these.diffs <- c( c( psiv - psi0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
 
