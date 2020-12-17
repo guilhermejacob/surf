@@ -276,6 +276,7 @@ modelB.initial <- function( CountMatrix ) {
   Ri <- CountMatrix[ , ncol(CountMatrix) ][ - nrow( CountMatrix ) ]
   Cj <- CountMatrix[ nrow( CountMatrix ) , ][ - ncol( CountMatrix ) ]
   M <- CountMatrix[ nrow( CountMatrix ) , ncol( CountMatrix ) ]
+  N <- sum( CountMatrix )
 
   # Obtain maximum pseudo-likelihood estimates for response model parameters
   # rho, and tau according to Result 4.7 of Rojas (2014, p.46-47)

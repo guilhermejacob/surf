@@ -1,7 +1,7 @@
 Package: surf
 Type: Package
 Title: Survey-based Flow Estimation
-Version: 0.9.6
+Version: 0.9.7
 Author: Guilherme Jacob
 Date: 12-10-2020
 Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
@@ -10,9 +10,10 @@ BugReports: https://github.com/guilhermejacob/glowing-lamp
 Depends:
     R (>= 3.5.0),
     stats,
-    survey,
     Matrix
 Imports:
+    numDeriv,
+    survey,
     MASS,
     abind
 License: GPL-3

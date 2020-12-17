@@ -22,7 +22,7 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   smalln <- sum( ww > 0 )
 
   # calculate observed proportions
-  observed.props <- svymean( Amat , design , na.rm = FALSE )
+  observed.props <- survey::svymean( Amat , design , na.rm = FALSE )
 
   # calculate chi distances
   est.vec <- c( aperm( model.estimates , c(2,1,3) ) )
@@ -57,7 +57,7 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   # second-order correction
   var.delta <- ( sum( ( delta.value - delta.bar )^2 ) / df )
   a2 <- var.delta / ( delta.bar^2 )
-  nu <- degf( design )
+  nu <- survey::degf( design )
   statistic <- statistic / ( 1 +  a2 )
 
   # score
