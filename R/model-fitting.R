@@ -73,12 +73,12 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       v <- v+1
 
       # calculate auxiliary stats
-      nipij <- sweep( pijv , 1 , etav , "*" )
+      nipij <- sweep( pij0 , 1 , eta0 , "*" )
 
       # calculate eta v+1
       etav <-
-        ( rowSums( Nij ) + Ri + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) ) /
-        ( sum( Nij ) + sum( Ri ) + sum( Cj ) )
+        ( rowSums( Nij ) + Ri + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) + M * eta0 ) / N
+        # ( rowSums( Nij ) + Ri + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) ) / (N - M)
 
       # calculate pij v+1
       pijv <-
