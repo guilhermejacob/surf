@@ -38,8 +38,11 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   # number of restrictions
   n.restr <- k+1
 
-  # define log-likelihood
-  this.loglik <- switch( model , A = pll.modA , B = pll.modB , C = pll.modC , D = pll.modD )
+  # define (pseudo) log-likelihood
+  this.loglik <- switch( model , A = modelA.loglik , B = modelB.loglik , C = modelC.loglik , D = modelD.loglik )
+
+  # define expected proportions function
+  this.expfun <- switch( model , A = modelA.expected , B = modelB.expected , C = modelC.expected , D = modelD.expected )
 
   # create algorithm info
   if ( keep.info ) {
@@ -92,12 +95,12 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # calculate pseudo-likelihood
-      iter.loglik <- this.loglik( psi , rho , tau , etav , pijv , CountMatrix )
+      iter.loglik <- this.loglik( c( psi , rho , tau , etav , t( pijv ) ) , CountMatrix )
       delta.loglik <- iter.loglik - last.loglik
       delta.loglik <- delta.loglik / N
 
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t loglik: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # store fitting information
       if ( keep.info ) {
@@ -184,12 +187,10 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # calculate pseudo-likelihood
-      iter.loglik <- this.loglik( psiv , rho , tau , etav , pijv , CountMatrix )
-      delta.loglik <- iter.loglik - last.loglik
-      delta.loglik <- delta.loglik / N
+      iter.loglik <- this.loglik( c( psiv , rho , tau , etav , t( pijv ) ) , CountMatrix )
 
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t loglik: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # store fitting information
       if ( keep.info ) {
@@ -280,12 +281,10 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # calculate pseudo-likelihood
-      iter.loglik <- this.loglik( psi , rhoi , tauiv , etav , pijv , CountMatrix )
-      delta.loglik <- iter.loglik - last.loglik
-      delta.loglik <- delta.loglik / N
+      iter.loglik <- this.loglik( c( psi , rhoi , tauiv , etav , t( pijv ) ) , CountMatrix )
 
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t loglik: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # store fitting information
       if ( keep.info ) {
@@ -405,12 +404,10 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       maxdiff <- max( abs( these.diffs ) )
 
       # calculate pseudo-likelihood
-      iter.loglik <- this.loglik( psi , rhojv , taujv , etav , pijv , CountMatrix )
-      delta.loglik <- iter.loglik - last.loglik
-      delta.loglik <- delta.loglik / N
+      iter.loglik <- this.loglik( c( psi , rhojv , taujv , etav , t( pijv ) ) , CountMatrix )
 
       # process tracker
-      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t (p)ll: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
+      if (verbose) cat( sprintf( paste0( "iteration: %5s\t maxdiff: %1." , ndig , "f \t loglik: %-10." , ndig , "f \n" ) , v , maxdiff , iter.loglik ) )
 
       # store fitting information
       if ( keep.info ) {
@@ -462,33 +459,12 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
   if ( model == "MCAR" ) return( mfit )
 
   ### expected proportions under the model
-  estimated.props <- if ( model == "A" ) {
-    cbind( rbind( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * res[["rho"]] ,
-                  colSums( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) * ( 1 - res[["tau"]] ) ) ) ,
-           c( rowSums( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * ( 1 - res[["rho"]] ) ) ,
-              sum( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) *  res[["tau"]] ) ) )
-  } else if ( model == "B" ) {
-    cbind( rbind( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * res[["rho"]] ,
-                  colSums( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) * ( 1 - res[["tau"]] ) ) ) ,
-           c( rowSums( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) * ( 1 - res[["rho"]] ) ) ,
-              sum( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) *  res[["tau"]] ) ) )
-  } else if ( model == "C" ) {
-    cbind( rbind( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 1 , res[["rho"]] , "*" ) ,
-                  colSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 1 , 1 - res[["tau"]] , "*" ) ) ) ,
-           c( rowSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 1 , 1 - res[["rho"]] , "*" ) ) ,
-              sum( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 1 , res[["tau"]] , "*" ) ) ) )
-  } else if ( model == "D" ) {
-    cbind( rbind( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 2 , res[["rho"]] , "*" ) ,
-                  colSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 2 , 1 - res[["tau"]] , "*" ) ) ) ,
-           c( rowSums( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * res[["psi"]] , "*" ) , 2 , 1 - res[["rho"]] , "*" ) ) ,
-              sum( sweep( sweep( res[["pij"]] , 1 , res[["eta"]] * ( 1 - res[["psi"]] ) , "*" ) , 2 , res[["tau"]] , "*" ) ) ) )
-  }
-  dimnames( estimated.props ) <- dimnames( CountMatrix )
+  estimated.props <- this.expfun( c( mfit[["psi"]] , mfit[["rho"]] , mfit[["tau"]] ,mfit[["eta"]] , t( mfit[["pij"]] ) ) , k )
 
   # test value
   stopifnot( all.equal( sum( estimated.props ) , 1 ) )
 
-  ### log pseudo-likelihood
+  ### pseudo log-likelihood
   pll <- CountMatrix * log( estimated.props )
   mfit[["ll"]] <- sum( pll )
 
