@@ -16,15 +16,15 @@
 )
 }
 \arguments{
-\item{x}{a formula indicating a \emph{factor} variable.}
+\item{x}{a one-sided formula indicating a \emph{factor} variable.}
 
-\item{design}{surflow.design object}
+\item{design}{survey design object}
 
 \item{model}{model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.}
 
 \item{tol}{Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.}
 
-\item{maxit}{Maximum number of iterations for iterative proportional fitting.}
+\item{maxit}{Maximum number of iterations for iterative proportional fitting. Defaults to \code{maxit = 5000}.}
 
 \item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
 
@@ -39,17 +39,12 @@ These objects have methods for coef, vcov, SE, and cv.
 Compute gross flows for data from complex surveys with repeated samples.
 }
 \details{
-The \code{na.rm} option should be used cautiously. Usually, \code{NA} encoding has two possible meanings: a \emph{missing} information or
-a \emph{not applicable} information. If the former should be dropped, while the latter should not. By default, if the table has an \code{NA}, it will
-return an table with \code{NAs}. If \code{na.rm = TRUE}, the \code{NA} encoded responses are assumed to be missing at random, and Rojas et al. (2014)
-method is applied.
-
-It is important to distinguish missing responses from unnaplicable responses. This is feasible by  subsetting the design
-for only applicable responses (with actual missing responses, if that is the case). For instance, suppose that we have two encoded variables:
-(a) employed/unemployed; and (b) type of contract, with NAs if the response is missing or is unnaplicable. The answers of (a) define what are
-the applicable responses for responses for (b). In this case, if we are going to analyze contract changes from people employed in the first round,
-we should filter for people employed in both the first \emph{and} second rounds. This can be done using \code{subset}. Then, the remaining \code{NA} are
-actual missing responses.
+It is important to distinguish "missing" responses from "unnaplicable" responses. This is feasible by subsetting the design
+for only applicable responses (with actual missing responses, if that is the case). For instance, suppose that we have two variables encoded as
+employed/unemployed, with NAs if the response is missing or is unnaplicable. An \code{NA} might be a person that did not respond \emph{or} a person
+who was under the working-age at the time of the survey. It is important to distinguish across those, as only one of those cases is an
+actual non-response. You could do that by looking for people who were in working age in any round, for instance. This can be done by using \code{subset},
+as you should for a \code{survey design} object.
 }
 \examples{
 
@@ -71,7 +66,7 @@ SE( estflows$muij )
 
 }
 \references{
-ROJAS, H. A. G.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
+GUTIERREZ, H. A.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
 \emph{Survey Methodology}, v. 40, n. 2, p. 285–321, dec. 2014. URL \url{https://www150.statcan.gc.ca/n1/en/catalogue/12-001-X201400214113}.
 
 LUMLEY, T. \emph{Complex Surveys:} A guide to analysis using R.

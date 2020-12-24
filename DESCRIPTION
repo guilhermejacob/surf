@@ -1,12 +1,12 @@
 Package: surf
 Type: Package
 Title: Survey-based Flow Estimation
-Version: 0.9.7
+Version: 0.9.8
 Author: Guilherme Jacob
-Date: 12-10-2020
+Date: 23-12-2020
 Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
-Description: Estimation of Gross Flows with Complex Surveys.
-BugReports: https://github.com/guilhermejacob/glowing-lamp
+Description: Estimation of Gross Flows with Non-Response under Complex Sampling Designs.
+BugReports: https://github.com/guilhermejacob/surf
 Depends:
     R (>= 3.5.0),
     stats,

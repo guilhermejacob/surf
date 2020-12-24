@@ -81,7 +81,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       # calculate eta v+1
       etav <-
         ( rowSums( Nij ) + Ri + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) + M * eta0 ) / N
-        # ( rowSums( Nij ) + Ri + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) ) / (N - M)
+      # ( rowSums( Nij ) + Ri + rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) ) / (N - M)
 
       # calculate pij v+1
       pijv <-
@@ -342,7 +342,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
     tauj0 <- taujv <- M / ( M + Cj )
     # tauj0 <- taujv <- rep( M / ( sum( Cj ) + M ) , ncol( Nij ) )
     # tauj0 <- taujv <- if ( all( Cj < M ) ) ( M - Cj ) / M  else ( M - ( sum( Cj ) - Cj ) ) / ( M + Cj )
-    tauj0 <- taujv <- ifelse( M > Cj , 1 - Cj / M , M / ( M + Cj ) )
+    # tauj0 <- taujv <- ifelse( M > Cj , 1 - Cj / M , M / ( M + Cj ) )
     # tauj0 <- taujv <- runif( ncol( Nij ) , .05 , .95 )
     eta0 <- etav <- rowSums( Nij ) / sum( Nij )
     pij0 <- pijv <- sweep( Nij , 1 , rowSums( Nij ) , "/" )
@@ -359,6 +359,7 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
       pijrhoc <- sweep( pijv , 2 , 1 - rhojv , "*" )
       nipijrhoc <- sweep( nipij , 2 , 1 - rhojv , "*" )
       nipijtau <- sweep( nipij , 2 , taujv , "*" )
+      Tmat <- outer( etav , taujv )
 
       # calculate rhoj
       rhojv <-
@@ -367,7 +368,12 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
 
       # calculate tauj #1
       # taujv <- 1 - ( Cj * sum( nipijtau ) ) / ( M * colSums( nipij ) ) # Stasny
-      taujv <- ( M * colSums( nipijtau ) / sum( nipijtau ) ) / ( Cj + M * colSums( nipijtau ) / sum( nipijtau ) )
+      # if ( any( taujv > 1 | taujv < 0 ) ) {
+      #   Avec <- colSums( nipijtau ) / sum( nipijtau )
+      #   taujv <-  (M * Avec) / ( Cj + M * Avec )
+      # }
+      Avec <- colSums( nipijtau ) / sum( nipijtau )
+      taujv <-  (M * Avec) / ( Cj + M * Avec )
 
       # calculate eta
       etav <-
@@ -387,15 +393,13 @@ ipf <- function( CountMatrix , model , tol = NULL , maxit = 500 , verbose = FALS
             rowSums( sweep( sweep( nipij , 2 , colSums( nipij ) , "/" ) , 2 , Cj , "*" ) ) +
             M * rowSums( nipijtau ) / sum( nipijtau ) , "/" )
 
-      # check value consistency #2
-      while ( any( taujv < 0 | taujv > 1 ) ) taujv <- ( taujv + tauj0 ) / 2
-      while ( any( rhojv < 0 | rhojv > 1 ) ) rhojv <- ( rhojv + rhoj0 ) / 2
+      # # check value consistency #2
+      # while ( any( taujv < 0 | taujv > 1 ) ) taujv <- ( taujv + tauj0 ) / 2
+      # while ( any( rhojv < 0 | rhojv > 1 ) ) rhojv <- ( rhojv + rhoj0 ) / 2
 
-      # damping
-      taujv <- ( taujv + tauj0 ) / 2
-      rhojv <- ( rhojv + rhoj0 ) / 2
-      etav <- ( etav + eta0 ) / 2
-      pijv <- ( pijv + pij0 ) / 2
+      # # damping
+      # taujv <- ( taujv + tauj0 ) / 2
+      # rhojv <- ( rhojv + rhoj0 ) / 2
 
       # calculate differences
       these.diffs <- c( c( rhojv - rhoj0 ) , c( taujv - tauj0 ) , c( etav - eta0 ) , c( pijv - pij0 ) )
