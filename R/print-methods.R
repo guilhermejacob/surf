@@ -30,17 +30,19 @@ print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
                   drop0trailing = FALSE ,
                   justify = "right" )
   semat <- format( semat[,] ,
-                   digits = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
-                   nsmall = ifelse( attr( x , "statistic" ) == "muij" , 2 , 4 ) ,
+                   digits = ifelse( attr( x , "statistic" ) == "muij" , 0 , 4 ) ,
+                   nsmall = ifelse( attr( x , "statistic" ) == "muij" , 0 , 4 ) ,
                    scientific = FALSE ,
                    trim = FALSE ,
-                   justify = "right" , drop0trailing = TRUE )
+                   drop0trailing = FALSE ,
+                   justify = "right" )
   cvmat <- format( cvmat[,] ,
                    digits = 2 ,
                    nsmall = 2 ,
                    scientific = FALSE ,
                    trim = FALSE ,
-                   justify = "right" , drop0trailing = FALSE )
+                   drop0trailing = FALSE ,
+                   justify = "right" )
 
   # get header
   if ( attr( x , "statistic" ) == "muij" ) opheader <- "gross flows" else if ( attr( x , "statistic" ) == "pij" ) opheader <- "transition probabilities"
