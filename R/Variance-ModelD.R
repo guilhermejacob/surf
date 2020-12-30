@@ -250,9 +250,9 @@ modelD.variance <- function( xx , ww , res , design ) {
   eta.vmat <- full.vmat[ (2*K+1) + seq_len(K) , (2*K+1) + seq_len(K) ]
   pij.vmat <- full.vmat[ (3*K+1) + seq_len(K^2) , (3*K+1) + seq_len(K^2) ]
 
-  # collect variances from block diagonal matrix
-  pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
-  muij.vmat <-matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
+  # # collect variances from block diagonal matrix
+  # pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
+  # muij.vmat <-matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
 
   # build list of variances
   mvar <-

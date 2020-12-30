@@ -108,20 +108,20 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
     # build results list
     res <- sapply( c( "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
       if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
-        this_stats <- mfit[[z]]
-        attr( this_stats , "var" ) <- mvar[[z]]
-        names( this_stats ) <- if ( length( this_stats ) > 1 ) xlevels else z
-        colnames( attr( this_stats , "var" ) ) <- rownames( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
-        class( this_stats ) <- "svystat"
-        attr( this_stats , "statistic" ) <- z
+        this.stats <- mfit[[z]]
+        attr( this.stats , "var" ) <- mvar[[z]]
+        names( this.stats ) <- if ( length( this.stats ) > 1 ) xlevels else z
+        colnames( attr( this.stats , "var" ) ) <- rownames( attr( this.stats , "var" ) ) <- if ( length( attr( this.stats , "var" ) ) > 1 ) xlevels else z
+        class( this.stats ) <- "svystat"
+        attr( this.stats , "statistic" ) <- z
       } else if ( z %in% c( "pij" , "muij" ) ) {
-        this_stats <- mfit[[z]]
-        attr( this_stats , "var" ) <- mfit[[z]]
-        attr( this_stats , "var" )[,] <- mvar[[z]][,]
-        class( this_stats ) <- "svymstat"
-        attr( this_stats , "statistic" ) <- z
+        this.stats <- mfit[[z]]
+        attr( this.stats , "var" ) <- mfit[[z]]
+        attr( this.stats , "var" )[,] <- mvar[[z]][,]
+        class( this.stats ) <- "svymstat"
+        attr( this.stats , "statistic" ) <- z
       }
-      return(this_stats)
+      return(this.stats)
     } , simplify = FALSE )
 
     # create final object
@@ -164,30 +164,38 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   # build results list
   res <- sapply( c( "psi" , "rho" , "tau" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
     if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
-      this_stats <- mfit[[z]]
-      attr( this_stats , "var" ) <- mvar[[z]]
-      names( this_stats ) <- if ( length( this_stats ) > 1 ) xlevels else z
-      colnames( attr( this_stats , "var" ) ) <- rownames( attr( this_stats , "var" ) ) <- if ( length( attr( this_stats , "var" ) ) > 1 ) xlevels else z
-      class( this_stats ) <- "svystat"
-      attr( this_stats , "statistic" ) <- z
+      this.stats <- mfit[[z]]
+      attr( this.stats , "var" ) <- mvar[[z]]
+      names( this.stats ) <- if ( length( this.stats ) > 1 ) xlevels else z
+      colnames( attr( this.stats , "var" ) ) <- rownames( attr( this.stats , "var" ) ) <- if ( length( attr( this.stats , "var" ) ) > 1 ) xlevels else z
+      class( this.stats ) <- "svystat"
+      attr( this.stats , "statistic" ) <- z
     } else if ( z %in% c( "pij" , "muij" ) ) {
-      this_stats <- mfit[[z]]
-      attr( this_stats , "var" ) <- mfit[[z]]
-      attr( this_stats , "var" )[,] <- mvar[[z]][,]
-      class( this_stats ) <- "svymstat"
-      attr( this_stats , "statistic" ) <- z
+      this.stats <- mfit[[z]]
+      these.classes <- expand.grid( dimnames( this.stats ) )
+      these.classes <- these.classes[ order( these.classes[, 2 ] ) , ]
+      these.classes <- apply( these.classes , 1 , paste, collapse = ":" )
+      this.vector <- c( t( this.stats ) )
+      names( this.vector ) <- these.classes
+      this.vmat <-  mvar[[z]]
+      dimnames( this.vmat ) <- list( these.classes , these.classes )
+      attr( this.vector , "var" ) <- this.vmat
+      attr( this.vector , "categories" ) <- dimnames( this.stats )
+      class( this.vector ) <- c( "svymstat" , "svystat" )
+      attr( this.vector , "statistic" ) <- z
+      this.stats <- this.vector
     }
-    return(this_stats)
+    return(this.stats)
   } , simplify = FALSE )
 
   # create final object
   rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
   rval$model <- mfit$model
   class(rval) <- "flowstat"
-  attr( rval , "formula" )   <- x
-  attr( rval , "has.order" )   <- has.order
-  attr( rval , "iter" )   <- mfit$iter
-  attr( rval , "adj.chisq" )   <- pearson
+  attr( rval , "formula" ) <- x
+  attr( rval , "has.order" ) <- has.order
+  attr( rval , "iter" ) <- mfit$iter
+  attr( rval , "adj.chisq" ) <- pearson
 
   # return final object
   rval

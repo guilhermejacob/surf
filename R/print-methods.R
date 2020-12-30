@@ -6,12 +6,15 @@ print.svymstat <- function( x , var.type = c("se","var","cv") , ... ) {
 
   # collect coefficients
   cmat <- x
+  cmat <- matrix( cmat , nrow = sapply( attr( x , "categories" ) , length )[1] , dimnames = attr( x , "categories" ) , byrow = TRUE )
   attr( cmat , "var" ) <- NULL
   attr( cmat , "statistic" ) <- NULL
   attr( cmat , "class" ) <- NULL
 
   # collect standard-errors, variance, and cv
   vmat <- attr( x , "var" )
+  vmat <- matrix( diag( vmat ) , nrow = nrow( cmat ) , byrow = TRUE )
+  dimnames( vmat ) <- dimnames( cmat )
   semat <- sqrt( vmat )
   cvmat <- semat / cmat
 
