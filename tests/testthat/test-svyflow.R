@@ -122,6 +122,7 @@ test_that("compare point estimates vs population values",{
   expect_equivalent( coef( flow_srs_lin$rho ) , rho.pop , tolerance = .50 )
   expect_equivalent( coef( flow_srs_lin$tau ) , tau.pop , tolerance = .50 )
   expect_equivalent( coef( flow_srs_lin$eta ) , eta.pop , tolerance = .20 )
-  expect_equivalent( coef( flow_srs_lin$muij ) , muij.pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_lin$muij , to.matrix = TRUE ) , muij.pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_lin$pij , to.matrix = TRUE ) , pij.pop , tolerance = .20 )
 
 } )

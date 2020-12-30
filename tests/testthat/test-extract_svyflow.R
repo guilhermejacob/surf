@@ -99,6 +99,6 @@ test_that("outputs",{
   expect_is( flow_srs_lin$muij , "svymstat" )
 
   expect_equivalent( sum( coef( flow_srs_lin$eta ) ) , 1 )
-  expect_equivalent( rowSums( coef( flow_srs_lin$pij ) ) , rep( 1 , nrow( pij.pop ) ) )
+  expect_equivalent( rowSums( coef( flow_srs_lin$pij , to.matrix = TRUE ) ) , rep( 1 , nrow( pij.pop ) ) )
 
 } )
