@@ -1,11 +1,11 @@
 #' @exportS3Method coef svymstat
-coef.svymstat <- function( object , to.matrix = FALSE , ... ) {
+coef.svymstat <- function( object , ... ) {
   attr(object, "categories") -> these.dimnames
   object <- unclass(object)
   attr(object, "statistic") <- NULL
   attr(object, "var") <- NULL
   attr(object, "categories") <- NULL
-  if (to.matrix) object <- matrix( object , nrow = sapply( these.dimnames , length )[1] , dimnames = these.dimnames , byrow = TRUE )
+  object <- matrix( object , nrow = sapply( these.dimnames , length )[1] , dimnames = these.dimnames , byrow = TRUE )
   object
 }
 
@@ -28,7 +28,7 @@ SE.svymstat <- function( object , ... ) {
 #' @exportS3Method  cv svymstat
 cv.svymstat <- function( object , ... ) {
   se.mat   <- SE( object )
-  coef.mat <- coef( object , to.matrix = TRUE )
+  coef.mat <- coef( object )
   cv.mat <- se.mat / coef.mat
   cv.mat
 }
@@ -36,7 +36,7 @@ cv.svymstat <- function( object , ... ) {
 #' @importFrom stats confint
 #' @exportS3Method  confint svymstat
 confint.svymstat <- function(object , parm , level = 0.95, df = Inf, ...) {
-  coef.mat <- invisible( coef( object , to.matrix = TRUE ) )
+  coef.mat <- invisible( coef( object ) )
   pnames <- names( coef.mat )
   a <- (1 - level)/2
   a <- c(a, 1 - a)
@@ -48,4 +48,16 @@ confint.svymstat <- function(object , parm , level = 0.95, df = Inf, ...) {
   ci.mat <- list( ci.mat[,,1] , ci.mat[,,2] )
   names( ci.mat ) <- pct
   ci.mat
+}
+
+#' @importFrom survey svycontrast
+#' @export
+svycontrast.svymstat <- function( stat , contrasts , ... ) {
+
+  # remove the "svymstat" class from the current object
+  class( stat ) <- setdiff( class(stat) , "svymstat" )
+
+  # apply usual function
+  survey::svycontrast( stat , contrasts , ... )
+
 }
