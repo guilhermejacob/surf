@@ -62,7 +62,7 @@ modelA.WVec <- function( theta , CountMatrix ) {
 }
 
 # function for model variance calculation
-modelA.variance <- function( xx , ww , res , design ) {
+modelA.linearization <- function( xx , ww , res , design ) {
 
   # load objects
   Amat <- res[["observed.counts"]]
@@ -168,11 +168,7 @@ modelA.variance <- function( xx , ww , res , design ) {
   # inverse of the jacobian matrix
   Jmat.inv <- MASS::ginv( Jmat )
 
-  # # calculate variance #1
-  # vmat0 <- survey::svyrecvar( sweep( Umat , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-  # full.vmat0 <- Jmat.inv %*% vmat0 %*% t( Jmat.inv )
-
-  # calculate variance #2
+  # calculate variance
   Umat.adj <- t( apply( Umat , 1 , function(z) crossprod( t(Jmat.inv) , z ) ) )
   u.psi <- Umat.adj[ , 1 ]
   u.rho <- Umat.adj[ , 2 ]
@@ -183,7 +179,6 @@ modelA.variance <- function( xx , ww , res , design ) {
   for ( i in seq_len( ncol( Nij ) ) ) {
     a.pij[,i,] <- u.pij[ , Kmat[ i , ] ]
   }
-  full.vmat <- survey::svyrecvar( sweep( Umat.adj , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   ##### other variances
 
@@ -192,9 +187,6 @@ modelA.variance <- function( xx , ww , res , design ) {
   for ( i in seq_len( nrow(Nij) ) ) for ( j in seq_len( ncol( Nij ) ) ) {
     u.nipij[,i,j] <- ( pij[i,j] * u.eta[,i] + eta[i] * a.pij[,i,j] )
   }
-  # u.nipij <- matrix( u.nipij , nrow = dim( u.pij )[1] , byrow = FALSE )
-  # nipij.vmat <- survey::svyrecvar( sweep( u.nipij , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
-  # nipij.vmat <- matrix( diag( nipij.vmat ) , nrow = nrow( Nij ) , byrow = FALSE )
 
   # gross flows
   a.muij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
@@ -203,48 +195,32 @@ modelA.variance <- function( xx , ww , res , design ) {
   }
   u.muij <- matrix( 0 , nrow = dim( a.muij )[1] , ncol = K^2 , byrow = TRUE )
   for ( i in seq_len( nrow( Nij ) ) ) u.muij[,Kmat[i,]] <- a.muij[,i,]
-  muij.vmat <- survey::svyrecvar( sweep( u.muij , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
   rm( a.muij )
 
   # final distribution
   u.gamma <- apply( u.nipij , c(1,3) , sum )
   for ( j in seq_len( nrow( Nij ) ) ) u.gamma[,j] <- rowSums( u.nipij[,,j] )
-  gamma.vmat <- survey::svyrecvar( sweep( u.gamma , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   # delta
   delta <- N * ( colSums( nipij ) - eta )
   u.delta <- sweep( N * ( u.gamma - u.eta ) , 2 , ( colSums( nipij ) - eta ) , "+" )
-  delta.vmat <- survey::svyrecvar( sweep( u.delta , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata )
 
   ##### split full matrix
 
-  # non-response
-  psi.vmat <- diag(full.vmat)[1]
-  rho.vmat <- diag(full.vmat)[2]
-  tau.vmat <- diag(full.vmat)[3]
-
-  # unobserved process
-  eta.vmat <- full.vmat[ 3 + seq_len(K) , 3 + seq_len(K) ]
-  pij.vmat <- full.vmat[ (K+3) + seq_len(K^2) , (K+3) + seq_len(K^2) ]
-
-  # # collect variances from block diagonal matrix
-  # pij.vmat <- matrix( diag( pij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
-  # muij.vmat <-matrix( diag( muij.vmat ) , nrow = nrow( Nij ) , byrow = TRUE )
-
-  # build list of variances
-  mvar <-
+  # build list of linearized variables
+  llin <-
     list(
-      "psi" = matrix( psi.vmat ) ,
-      "rho" = matrix( rho.vmat ) ,
-      "tau" = matrix( tau.vmat ) ,
-      "eta" = eta.vmat ,
-      "pij" = pij.vmat ,
-      "muij" = muij.vmat ,
-      "gamma" = gamma.vmat ,
-      "delta" = delta.vmat )
+      "psi" = u.psi ,
+      "rho" = u.rho ,
+      "tau" = u.tau ,
+      "eta" = u.eta ,
+      "pij" = u.pij ,
+      "muij" = u.muij ,
+      "gamma" = u.gamma ,
+      "delta" = u.delta )
 
-  # return list of variances
-  return( mvar )
+  # return list
+  return( llin )
 
 }
 

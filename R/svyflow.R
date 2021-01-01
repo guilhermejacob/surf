@@ -90,51 +90,10 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
 
   # treat full response
-  if ( all( c( Ri , Cj , M ) == 0 ) & any( Nij > 0 ) ) {
+  if ( all( c( Ri , Cj , M ) == 0 ) & all( Nij > 0 ) ) {
 
     # issue warning
-    warning( "counts show full response. ignoring model.")
-
-    # remove borders from table
-    Amat <- Amat[ -nrow( Amat ) , -ncol( Amat ) ]
-
-    # model fitting
-    mfit <- frf( Amat )
-    mfit$delta <- mfit$gamma - mfit$eta
-
-    # variance estimation
-    mvar <- frf_variance( xx , ww , res = mfit , design = design )
-
-    # build results list
-    res <- sapply( c( "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
-      if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
-        this.stats <- mfit[[z]]
-        attr( this.stats , "var" ) <- mvar[[z]]
-        names( this.stats ) <- if ( length( this.stats ) > 1 ) xlevels else z
-        colnames( attr( this.stats , "var" ) ) <- rownames( attr( this.stats , "var" ) ) <- if ( length( attr( this.stats , "var" ) ) > 1 ) xlevels else z
-        class( this.stats ) <- "svystat"
-        attr( this.stats , "statistic" ) <- z
-      } else if ( z %in% c( "pij" , "muij" ) ) {
-        this.stats <- mfit[[z]]
-        attr( this.stats , "var" ) <- mfit[[z]]
-        attr( this.stats , "var" )[,] <- mvar[[z]][,]
-        class( this.stats ) <- "svymstat"
-        attr( this.stats , "statistic" ) <- z
-      }
-      return(this.stats)
-    } , simplify = FALSE )
-
-    # create final object
-    rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
-    rval$model <- "Full Response"
-    class(rval) <- "flowstat"
-    attr( rval , "formula" )   <- x
-    attr( rval , "has.order" )   <- has.order
-    attr( rval , "iter" )   <- NA
-    attr( rval , "observed.counts" )   <- mfit$observed.counts
-
-    # return final object
-    return( rval )
+    stop( "counts show full response." )
 
   }
 
@@ -158,8 +117,127 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   n.parms <- switch (model, A = { K^2 + K + 3 } , B = { K^2 + 2*K + 2 } , C = { K^2 + 3*K + 1 } , D = { K^2 + 3*K + 1 } )
   pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms )
 
-  # variance estimation
-  mvar <- variance_fun( xx , ww , res = mfit , design = design )
+  # estimate linearized variables
+  llin <- linearization_fun( xx , ww , res = mfit , design = design )
+  llin[ lapply( llin , class ) %in% "numeric" ] <- lapply( llin[ lapply( llin , class ) %in% "numeric" ] , matrix , nrow = length( ww ) )
+
+  # calculate variance
+  mvar <- lapply( llin , function(z) survey::svyrecvar( sweep( z , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+
+  # build results list
+  res <- sapply( c( "psi" , "rho" , "tau" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
+    if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
+      this.stats <- mfit[[z]]
+      attr( this.stats , "var" ) <- mvar[[z]]
+      names( this.stats ) <- if ( length( this.stats ) > 1 ) xlevels else z
+      colnames( attr( this.stats , "var" ) ) <- rownames( attr( this.stats , "var" ) ) <- if ( length( attr( this.stats , "var" ) ) > 1 ) xlevels else z
+      class( this.stats ) <- "svystat"
+      attr( this.stats , "statistic" ) <- z
+    } else if ( z %in% c( "pij" , "muij" ) ) {
+      this.stats <- mfit[[z]]
+      these.classes <- expand.grid( dimnames( this.stats ) )
+      these.classes <- these.classes[ order( these.classes[, 2 ] ) , ]
+      these.classes <- apply( these.classes , 1 , paste, collapse = ":" )
+      this.vector <- c( t( this.stats ) )
+      names( this.vector ) <- these.classes
+      this.vmat <-  mvar[[z]]
+      dimnames( this.vmat ) <- list( these.classes , these.classes )
+      attr( this.vector , "var" ) <- this.vmat
+      attr( this.vector , "categories" ) <- dimnames( this.stats )
+      class( this.vector ) <- c( "svymstat" , "svystat" )
+      attr( this.vector , "statistic" ) <- z
+      this.stats <- this.vector
+    }
+    return(this.stats)
+  } , simplify = FALSE )
+
+  # create final object
+  rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
+  rval$model <- mfit$model
+  class(rval) <- "flowstat"
+  attr( rval , "formula" ) <- x
+  attr( rval , "has.order" ) <- has.order
+  attr( rval , "iter" ) <- mfit$iter
+  attr( rval , "adj.chisq" ) <- pearson
+
+  # return final object
+  rval
+
+}
+
+#' @export
+#' @rdname svyflow
+#' @method svyflow svyrep.design
+svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , ... ){
+
+  # test values
+  model <- match.arg( model , several.ok = FALSE )
+
+  # collect sample data and put in single data frame
+  xx <- stats::model.frame( x , data = design$variables , na.action = stats::na.pass )
+
+  # test column format
+  if ( !all( sapply( xx , is.factor ) ) ) stop( "this function is only valid for factors." )
+
+  # Gets levels of factors for both time periods
+  xlevels <- lapply( xx , function(zz) levels( zz ) )
+
+  # gets dimension of variable for which flows are to be estimated
+  ll <- lapply( xlevels , function(zz) length( zz ) )
+  if ( !all( ll[[1]] == ll[[2]] & xlevels[[1]] == xlevels[[2]] ) ) stop( "inconsistent categories across rounds." )
+
+  # when levels are the same across periods, returns unique levels of variable for which flows are to be estimated
+  xlevels <- unique( unlist(xlevels) )
+
+  # check for ordered categories
+  ll <- unique( unlist(ll) )
+  has.order <- ifelse( all( sapply( xx , is.ordered ) ) , TRUE , FALSE )
+
+  # collect weights
+  ww <-  stats::weights( design , "sampling" )
+
+  # estimate counts
+  Amat <- stats::xtabs( c(ww,0) ~ . , data = rbind(xx , rep(NA,ncol(xx))) , addNA = TRUE , drop.unused.levels = FALSE )
+
+  # non-response cells
+  Nij <- Amat[ -nrow( Amat ) , -ncol( Amat ) ]
+  Ri <- Amat[ , ncol(Amat) ][ - nrow( Amat ) ]
+  Cj <- Amat[ nrow( Amat ) , ][ - ncol( Amat ) ]
+  M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
+
+  # treat full response
+  if ( all( c( Ri , Cj , M ) == 0 ) & all( Nij > 0 ) ) {
+
+    # issue warning
+    stop( "counts show full response." )
+
+  }
+
+  # test for zero counts
+  if ( any( Amat <= 0 ) ) {
+    print( Amat , quote = FALSE )
+    stop( "stopping. some cells had zero counts. consider collapsing categories.")
+  }
+
+  # model fitting
+  mfit <- ipf( Amat , model , tol = tol , maxit = maxit , verbose = verbose , keep.info = FALSE )
+
+  # visit proportions
+  interview.number <- data.frame( visit = rep( 1 , length( ww) ) )
+  vVec <- c( stats::xtabs( ww ~ visit , data = interview.number , addNA = TRUE , drop.unused.levels = FALSE ) / sum( ww ) )
+  model.expected <- outer( mfit$estimated.props , vVec )
+
+  # rao-scott adjustment of the chi-square
+  K <- dim( model.expected )[1] - 1
+  n.parms <- switch (model, A = { K^2 + K + 3 } , B = { K^2 + 2*K + 2 } , C = { K^2 + 3*K + 1 } , D = { K^2 + 3*K + 1 } )
+  pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms )
+
+  # estimate linearized variables
+  llin <- linearization_fun( xx , ww , res = mfit , design = design )
+  llin[ lapply( llin , class ) %in% "numeric" ] <- lapply( llin[ lapply( llin , class ) %in% "numeric" ] , matrix , nrow = length( ww ) )
+
+  # calculate variance
+  mvar <- lapply( llin , function(z) stats::vcov( survey::svytotal( z , design ) ) )
 
   # build results list
   res <- sapply( c( "psi" , "rho" , "tau" , "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {

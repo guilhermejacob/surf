@@ -6,6 +6,7 @@ set.seed( 123 )
 # load libraries
 library( survey )
 library( surf )
+library( testthat )
 
 # define population and sample size
 N <- as.integer( 10^5 )
@@ -67,62 +68,102 @@ rownames( smp.df ) <- NULL
 smp.df[, c( "v0" , "v1" ) ] <- lapply( smp.df[, c( "v0" , "v1" ) ] , factor , levels = c( 1:4 ) , labels = 1:4 )
 table( smp.df[ , c("v0","v1")] , useNA = "always" )
 
-# sampling design information
+# sampling des.lin information
 smp.df$wgt    <- N / n
 smp.df$fpcs   <- N
 
-# declare survey design object
-design <-
+# declare survey des.lin object
+des.lin <-
   svydesign( ids = ~ 1 ,
              weights = ~ wgt ,
              fpc = ~fpcs ,
              data = smp.df ,
              nest = TRUE )
 
+# resampling object
+des.rep <- as.svrepdesign( des.lin , "bootstrap" , replicates = 100 )
+
 # estima contagens
-svytable( ~v0+v1 , design , addNA = TRUE )
+svytable( ~v0+v1 , des.lin , addNA = TRUE )
 
 # estimate gross flows
-flow_srs_lin <- svyflow( ~v0+v1 , design , model = "A" , verbose = FALSE )
+flow_srs_lin <- svyflow( ~v0+v1 , des.lin , model = "A" , verbose = FALSE )
+flow_srs_rep <- svyflow( ~v0+v1 , des.rep , model = "A" , verbose = FALSE )
 
 # test extraction of associated measures
-test_that( "extraction of estimates" , {
+test_that( "extraction of estimates: linearization" , {
 
   # point estimates
   expect_identical( coef( flow_srs_lin$psi ) , survey:::coef.svystat( flow_srs_lin$psi ) )
   expect_identical( coef( flow_srs_lin$rho ) , survey:::coef.svystat( flow_srs_lin$rho ) )
   expect_identical( coef( flow_srs_lin$tau ) , survey:::coef.svystat( flow_srs_lin$tau ) )
   expect_identical( coef( flow_srs_lin$eta ) , survey:::coef.svystat( flow_srs_lin$eta ) )
-  expect_identical( coef( flow_srs_lin$muij ) , surf:::coef.svymstat( flow_srs_lin$muij ) )
   expect_identical( coef( flow_srs_lin$pij ) , surf:::coef.svymstat( flow_srs_lin$pij ) )
+  expect_identical( coef( flow_srs_lin$muij ) , surf:::coef.svymstat( flow_srs_lin$muij ) )
 
   # variances
   expect_identical( vcov( flow_srs_lin$psi ) , survey:::vcov.svystat( flow_srs_lin$psi ) )
   expect_identical( vcov( flow_srs_lin$rho ) , survey:::vcov.svystat( flow_srs_lin$rho ) )
   expect_identical( vcov( flow_srs_lin$tau ) , survey:::vcov.svystat( flow_srs_lin$tau ) )
   expect_identical( vcov( flow_srs_lin$eta ) , survey:::vcov.svystat( flow_srs_lin$eta ) )
-  expect_identical( vcov( flow_srs_lin$muij ) , surf:::vcov.svymstat( flow_srs_lin$muij ) )
   expect_identical( vcov( flow_srs_lin$pij ) , surf:::vcov.svymstat( flow_srs_lin$pij ) )
+  expect_identical( vcov( flow_srs_lin$muij ) , surf:::vcov.svymstat( flow_srs_lin$muij ) )
 
   # standard errors
   expect_identical( SE( flow_srs_lin$psi ) , survey:::SE.svystat( flow_srs_lin$psi ) )
   expect_identical( SE( flow_srs_lin$rho ) , survey:::SE.svystat( flow_srs_lin$rho ) )
   expect_identical( SE( flow_srs_lin$tau ) , survey:::SE.svystat( flow_srs_lin$tau ) )
   expect_identical( SE( flow_srs_lin$eta ) , survey:::SE.svystat( flow_srs_lin$eta ) )
-  expect_identical( SE( flow_srs_lin$muij ) , surf:::SE.svymstat( flow_srs_lin$muij ) )
   expect_identical( SE( flow_srs_lin$pij ) , surf:::SE.svymstat( flow_srs_lin$pij ) )
+  expect_identical( SE( flow_srs_lin$muij ) , surf:::SE.svymstat( flow_srs_lin$muij ) )
+
+} )
+
+test_that( "extraction of estimates: resampling" , {
+
+  # point estimates
+  expect_identical( coef( flow_srs_rep$psi ) , survey:::coef.svystat( flow_srs_rep$psi ) )
+  expect_identical( coef( flow_srs_rep$rho ) , survey:::coef.svystat( flow_srs_rep$rho ) )
+  expect_identical( coef( flow_srs_rep$tau ) , survey:::coef.svystat( flow_srs_rep$tau ) )
+  expect_identical( coef( flow_srs_rep$eta ) , survey:::coef.svystat( flow_srs_rep$eta ) )
+  expect_identical( coef( flow_srs_rep$pij ) , surf:::coef.svymstat( flow_srs_rep$pij ) )
+  expect_identical( coef( flow_srs_rep$muij ) , surf:::coef.svymstat( flow_srs_rep$muij ) )
+
+  # variances
+  expect_identical( vcov( flow_srs_rep$psi ) , survey:::vcov.svystat( flow_srs_rep$psi ) )
+  expect_identical( vcov( flow_srs_rep$rho ) , survey:::vcov.svystat( flow_srs_rep$rho ) )
+  expect_identical( vcov( flow_srs_rep$tau ) , survey:::vcov.svystat( flow_srs_rep$tau ) )
+  expect_identical( vcov( flow_srs_rep$eta ) , survey:::vcov.svystat( flow_srs_rep$eta ) )
+  expect_identical( vcov( flow_srs_rep$pij ) , surf:::vcov.svymstat( flow_srs_rep$pij ) )
+  expect_identical( vcov( flow_srs_rep$muij ) , surf:::vcov.svymstat( flow_srs_rep$muij ) )
+
+  # standard errors
+  expect_identical( SE( flow_srs_rep$psi ) , survey:::SE.svystat( flow_srs_rep$psi ) )
+  expect_identical( SE( flow_srs_rep$rho ) , survey:::SE.svystat( flow_srs_rep$rho ) )
+  expect_identical( SE( flow_srs_rep$tau ) , survey:::SE.svystat( flow_srs_rep$tau ) )
+  expect_identical( SE( flow_srs_rep$eta ) , survey:::SE.svystat( flow_srs_rep$eta ) )
+  expect_identical( SE( flow_srs_rep$pij ) , surf:::SE.svymstat( flow_srs_rep$pij ) )
+  expect_identical( SE( flow_srs_rep$muij ) , surf:::SE.svymstat( flow_srs_rep$muij ) )
 
 } )
 
 # test against bias
 test_that("compare point estimates vs population values",{
 
-  # linearized design
+  # linearized des.lin
   expect_equivalent( coef( flow_srs_lin$psi ) , psi.pop , tolerance = .50 )
   expect_equivalent( coef( flow_srs_lin$rho ) , rho.pop , tolerance = .50 )
   expect_equivalent( coef( flow_srs_lin$tau ) , tau.pop , tolerance = .50 )
   expect_equivalent( coef( flow_srs_lin$eta ) , eta.pop , tolerance = .20 )
-  expect_equivalent( coef( flow_srs_lin$muij , to.matrix = TRUE ) , muij.pop , tolerance = .20 )
   expect_equivalent( coef( flow_srs_lin$pij , to.matrix = TRUE ) , pij.pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_lin$muij , to.matrix = TRUE ) , muij.pop , tolerance = .20 )
+
+  # resampling des.lin
+  expect_equivalent( coef( flow_srs_rep$psi ) , psi.pop , tolerance = .50 )
+  expect_equivalent( coef( flow_srs_rep$rho ) , rho.pop , tolerance = .50 )
+  expect_equivalent( coef( flow_srs_rep$tau ) , tau.pop , tolerance = .50 )
+  expect_equivalent( coef( flow_srs_rep$eta ) , eta.pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_rep$pij , to.matrix = TRUE ) , pij.pop , tolerance = .20 )
+  expect_equivalent( coef( flow_srs_rep$muij , to.matrix = TRUE ) , muij.pop , tolerance = .20 )
 
 } )

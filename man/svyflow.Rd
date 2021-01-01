@@ -3,9 +3,20 @@
 \name{svyflow}
 \alias{svyflow}
 \alias{svyflow.survey.design2}
+\alias{svyflow.svyrep.design}
 \title{Gross flow estimation between categories}
 \usage{
 \method{svyflow}{survey.design2}(
+  x,
+  design,
+  model = c("A", "B", "C", "D"),
+  tol = 1e-04,
+  maxit = 5000,
+  verbose = FALSE,
+  ...
+)
+
+\method{svyflow}{svyrep.design}(
   x,
   design,
   model = c("A", "B", "C", "D"),
