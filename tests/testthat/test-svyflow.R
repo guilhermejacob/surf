@@ -89,10 +89,10 @@ flow_srs_lin <- svyflow( ~v0+v1 , design , model = "A" , verbose = FALSE )
 test_that( "extraction of estimates" , {
 
   # point estimates
-  expect_identical( coef( flow_srs_lin$psi ) , surf:::coef.svymstat( flow_srs_lin$psi ) )
-  expect_identical( coef( flow_srs_lin$rho ) , surf:::coef.svymstat( flow_srs_lin$rho ) )
-  expect_identical( coef( flow_srs_lin$tau ) , surf:::coef.svymstat( flow_srs_lin$tau ) )
-  expect_identical( coef( flow_srs_lin$eta ) , surf:::coef.svymstat( flow_srs_lin$eta ) )
+  expect_identical( coef( flow_srs_lin$psi ) , survey:::coef.svystat( flow_srs_lin$psi ) )
+  expect_identical( coef( flow_srs_lin$rho ) , survey:::coef.svystat( flow_srs_lin$rho ) )
+  expect_identical( coef( flow_srs_lin$tau ) , survey:::coef.svystat( flow_srs_lin$tau ) )
+  expect_identical( coef( flow_srs_lin$eta ) , survey:::coef.svystat( flow_srs_lin$eta ) )
   expect_identical( coef( flow_srs_lin$muij ) , surf:::coef.svymstat( flow_srs_lin$muij ) )
   expect_identical( coef( flow_srs_lin$pij ) , surf:::coef.svymstat( flow_srs_lin$pij ) )
 
