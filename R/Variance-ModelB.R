@@ -59,6 +59,9 @@ modelB.WVec <- function( theta , CountMatrix ) {
   Wpij <- Wpij + sweep( outer( psicni , 1/colSums( psicnipij ) ) , 2 , Cj , "*" )
   Wpij <- sweep( Wpij , 1 , M * (psicni / sum( psicnipij )) , "+" )
 
+  # pij = zero
+  Wpij[ is.na( Wpij ) ] <- 0
+
   # lambda2 restriction
   lambda2 <-
     -( rowSums( Nij ) + Ri +
@@ -161,6 +164,10 @@ modelB.linearization <- function( xx , ww , res , design ) {
       ( 1 - zz[,1] ) * ( 1 - zz[,2] ) * ( psicni[i] / sum( psicni ) )
   }
 
+  # pij = zero
+  pij.zero.mat <- which( pij == 0 , arr.ind = TRUE )
+  for ( k in seq_len( nrow( pij.zero.mat ) ) ) a.pij[ , pij.zero.mat[k,1] , pij.zero.mat[k,2] ] <- 0
+
   # lambda2 restriction
   lambda2 <-
     -( rowSums( Nij ) + Ri +
@@ -195,6 +202,7 @@ modelB.linearization <- function( xx , ww , res , design ) {
   u.tau <- Umat.adj[ , K+2 ]
   u.eta <- Umat.adj[ , (K+2) + seq_len(K) ]
   u.pij <- Umat.adj[ , (2*K+2) + seq_len(K^2) ]
+  u.pij[ , which( t( pij ) == 0 , arr.ind = FALSE ) ] <- 0
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( i in seq_len( ncol( Nij ) ) ) {
     a.pij[,i,] <- u.pij[ , Kmat[ i , ] ]

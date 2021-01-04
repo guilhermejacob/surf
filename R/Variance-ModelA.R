@@ -31,6 +31,7 @@ modelA.WVec <- function( theta , CountMatrix ) {
   # psi
   Wpsi <- (( sum( Nij ) + sum( Ri ) ) / psi) - (( sum( Cj ) + M ) / ( 1- psi ))
 
+
   # rho
   Wrho <- (sum( Nij ) / rho) - (sum( Ri ) / ( 1 - rho ))
 
@@ -48,6 +49,9 @@ modelA.WVec <- function( theta , CountMatrix ) {
   Wpij <- sweep( Wpij , 1 , Ri / rowSums( pij ) , "+" )
   Wpij <- Wpij + outer( eta , Cj / colSums( nipij ) )
   Wpij <- sweep( Wpij , 1 , M * ( eta / sum( nipij ) ) , "+" )
+
+  # pij = zero
+  Wpij[ is.na( Wpij ) ] <- 0
 
   # lambda2 restriction
   lambda2 <-
@@ -148,6 +152,10 @@ modelA.linearization <- function( xx , ww , res , design ) {
          M * eta ) / N
   a.pij <- sweep( a.pij , 2 , lambda2 , "+" )
 
+  # pij = zero
+  pij.zero.mat <- which( pij == 0 , arr.ind = TRUE )
+  for ( k in seq_len( nrow( pij.zero.mat ) ) ) a.pij[ , pij.zero.mat[k,1] , pij.zero.mat[k,2] ] <- 0
+
   # coerce to matrix
   u.pij <- matrix( 0 , nrow = dim( a.pij )[1] , ncol = K^2 , byrow = TRUE )
   for ( i in seq_len( nrow( Nij ) ) ) u.pij[,Kmat[i,]] <- a.pij[,i,]
@@ -175,6 +183,7 @@ modelA.linearization <- function( xx , ww , res , design ) {
   u.tau <- Umat.adj[ , 3 ]
   u.eta <- Umat.adj[ , 3 + seq_len(K) ]
   u.pij <- Umat.adj[ , (K+3) + seq_len(K^2) ]
+  u.pij[ , which( t( pij ) == 0 , arr.ind = FALSE ) ] <- 0
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( i in seq_len( ncol( Nij ) ) ) {
     a.pij[,i,] <- u.pij[ , Kmat[ i , ] ]

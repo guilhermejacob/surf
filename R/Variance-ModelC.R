@@ -60,6 +60,9 @@ modelC.WVec <- function( theta , CountMatrix ) {
   Wpij <- Wpij + outer( taucni , Cj / colSums( taucnipij ) )
   Wpij <- sweep( Wpij , 1 , M * tauni / sum( tauni ) , "+" )
 
+  # pij = zero
+  Wpij[ is.na( Wpij ) ] <- 0
+
   # lambda2 restriction
   lambda2 <-
     -( rowSums( Nij ) + Ri +
@@ -164,6 +167,10 @@ modelC.linearization <- function( xx , ww , res , design ) {
       ( ( ( 1 - zz[,1] ) * ( 1 - zz[,2] ) ) * ( ( tauni[i] ) / sum( tauni ) ) )
   }
 
+  # pij = zero
+  pij.zero.mat <- which( pij == 0 , arr.ind = TRUE )
+  for ( k in seq_len( nrow( pij.zero.mat ) ) ) a.pij[ , pij.zero.mat[k,1] , pij.zero.mat[k,2] ] <- 0
+
   # lambda2 restriction
   lambda2 <-
     -( rowSums( Nij ) + Ri +
@@ -198,6 +205,7 @@ modelC.linearization <- function( xx , ww , res , design ) {
   u.tau <- Umat.adj[ , (K+1) +seq_len(K) ]
   u.eta <- Umat.adj[ , (2*K+1) + seq_len(K) ]
   u.pij <- Umat.adj[ , (3*K+1) + seq_len(K^2) ]
+  u.pij[ , which( t( pij ) == 0 , arr.ind = FALSE ) ] <- 0
   a.pij <- array( 0 , dim = c( nrow( xx ) , nrow( Nij ) , ncol( Nij ) ) )
   for ( i in seq_len( ncol( Nij ) ) ) {
     a.pij[,i,] <- u.pij[ , Kmat[ i , ] ]

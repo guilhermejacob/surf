@@ -9,6 +9,7 @@
 #' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
 #' @param maxit  Maximum number of iterations for iterative proportional fitting. Defaults to \code{maxit = 5000}.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
+#' @param as.zero.flows  Zeroes in the observed gross flows should be considered as zeroes in the population transition probability matrix? Defaults to \code{as.zero.flows = FALSE}.
 #' @param ...  future expansion.
 #'
 #' @details It is important to distinguish "missing" responses from "unnaplicable" responses. This is feasible by subsetting the design
@@ -52,7 +53,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , ... ){
+svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , ... ){
 
   # test values
   model <- match.arg( model , several.ok = FALSE )
@@ -97,11 +98,14 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
 
   }
 
-  # test for zero counts
-  if ( any( Amat <= 0 ) ) {
-    # issue warning
-    warning( "stopping. some cells had zero counts. consider collapsing categories.")
-    return( Amat )
+  # test for zero counts in observed flows
+  if ( any( Nij <= 0 ) & !as.zero.flows ) {
+    print( Amat , quote = FALSE )
+    stop( "Some observed flow cells had zero counts.
+             If those are zero counts in the population transition probability matrix, consider using as.zero.flows = TRUE.
+             If not, consider collapsing categories." )
+  } else if ( any( Nij <= 0 ) & as.zero.flows ) {
+    warning( "Some observed flow cells had zero counts. Model fitted with zeroes in the population transition probability matrix." , immediate. = TRUE )
   }
 
   # model fitting
@@ -115,7 +119,7 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   # rao-scott adjustment of the chi-square
   K <- dim( model.expected )[1] - 1
   n.parms <- switch (model, A = { K^2 + K + 3 } , B = { K^2 + 2*K + 2 } , C = { K^2 + 3*K + 1 } , D = { K^2 + 3*K + 1 } )
-  pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms )
+  pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms , pij.zero = sum( mfit$pij == 0 ) )
 
   # estimate linearized variables
   llin <- linearization_fun( xx , ww , res = mfit , design = design )
@@ -168,7 +172,7 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
 #' @export
 #' @rdname svyflow
 #' @method svyflow svyrep.design
-svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , ... ){
+svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , ... ){
 
   # test values
   model <- match.arg( model , several.ok = FALSE )
@@ -206,17 +210,21 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
   M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
 
   # treat full response
-  if ( all( c( Ri , Cj , M ) == 0 ) & all( Nij > 0 ) ) {
+  if ( all( c( Ri , Cj , M ) == 0 ) & all( Nij >= 0 ) ) {
 
     # issue warning
     stop( "counts show full response." )
 
   }
 
-  # test for zero counts
-  if ( any( Amat <= 0 ) ) {
+  # test for zero counts in observed flows
+  if ( any( Nij <= 0 ) & !as.zero.flows ) {
     print( Amat , quote = FALSE )
-    stop( "stopping. some cells had zero counts. consider collapsing categories.")
+    stop( "Some observed flow cells had zero counts.
+             If those are zero counts in the population transition probability matrix, consider using as.zero.flows = TRUE.
+             If not, consider collapsing categories." )
+  } else if ( any( Nij <= 0 ) & as.zero.flows ) {
+    warning( "Some observed flow cells had zero counts. Model fitted with zeroes in the population transition probability matrix." , immediate. = TRUE )
   }
 
   # model fitting
@@ -230,7 +238,7 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
   # rao-scott adjustment of the chi-square
   K <- dim( model.expected )[1] - 1
   n.parms <- switch (model, A = { K^2 + K + 3 } , B = { K^2 + 2*K + 2 } , C = { K^2 + 3*K + 1 } , D = { K^2 + 3*K + 1 } )
-  pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms )
+  pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms , pij.zero = sum( mfit$pij == 0 ) )
 
   # estimate linearized variables
   llin <- linearization_fun( xx , ww , res = mfit , design = design )

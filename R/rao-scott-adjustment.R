@@ -1,5 +1,5 @@
 # function for model variance calculation
-rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.parms ) {
+rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.parms , pij.zero = 0 ) {
 
   # calculate degrees of freedom
   K <- dim( model.estimates )[1] - 1
@@ -7,6 +7,7 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   n.counts <- sum( model.estimates > 0 )
   n.restr <- if ( V > 1 ) K+2 else K+1
   n.parms <- if ( V > 1 ) n.parms + V else n.parms
+  n.parms <- n.parms - pij.zero
   df <- n.counts + n.restr - n.parms - 1
 
   # add non-reponse
@@ -39,7 +40,7 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   # delta.value <- ( diag(Vdes) / diag(Vsrs) )[diag(Vsrs) > 0]
 
   # unadjusted chi-square
-  statistic <- smalln * sum( chimat )
+  statistic <- smalln * sum( chimat , na.rm = TRUE )
 
   # calculate generalized deff
   Vdes <- vcov( observed.props )
@@ -55,7 +56,8 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   statistic <- statistic / delta.bar
 
   # second-order correction
-  var.delta <- ( sum( ( delta.value - delta.bar )^2 ) / df )
+  # var.delta <- ( sum( ( delta.value - delta.bar )^2 ) / df )
+  var.delta <- ( sum( ifelse( delta.value > 0 , ( delta.value - delta.bar )^2 , 0 ) ) / df )
   a2 <- var.delta / ( delta.bar^2 )
   nu <- survey::degf( design )
   statistic <- statistic / ( 1 +  a2 )
