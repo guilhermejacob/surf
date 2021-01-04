@@ -1,4 +1,4 @@
-context("svyflow estimates with nonresponse and zero counts: Model B")
+context("svyflow estimates with nonresponse: Model C")
 
 # set seed of random number generator
 set.seed( 123 )
@@ -15,17 +15,17 @@ n <- as.integer( 10^4 )
 # superpopulation parameters
 eta.pop <- c( .40 , .30, .20, .10 )
 pij.pop <- matrix( c(.60,  .10 , .20, .10,
-                     .30, .50, 0, .20,
+                     .30, .50, .10, .10,
                      .20, .20, .30, .30,
-                     0 , .20 , .30, .50 ) , nrow = 4 , byrow = TRUE )
+                     .10 , .20 , .30, .40 ) , nrow = 4 , byrow = TRUE )
 
 # expected gross flows
 muij.pop <- N * sweep( pij.pop , 1 , eta.pop , "*" )
 
 # non-response pattern
-psi.pop <- c( .90, .80 , .70 , .60 )
-rho.pop <- .60
-tau.pop <- .60
+psi.pop <- .70
+rho.pop <- c( .80 , .50 , .70 , .60 )
+tau.pop <- c( .80 , .70 , .60 , .80 )
 
 # population parameters
 poplist <-
@@ -46,14 +46,16 @@ state.table$v1[ state.table$v1 == 5 ] <- NA
 
 # intermediate computations
 nipij <- sweep( pij.pop , 1 , eta.pop , "*" )
-psinipij <- sweep( nipij , 1 , psi.pop , "*" )
-psicnipij <- sweep( nipij , 1 , 1 - psi.pop , "*" )
+rhonipij <- sweep( nipij , 1 , rho.pop , "*" )
+rhocnipij <- sweep( nipij , 1 , 1 - rho.pop , "*" )
+taunipij <- sweep( nipij , 1 , tau.pop , "*" )
+taucnipij <- sweep( nipij , 1 , 1 - tau.pop , "*" )
 
 # matrix blocks
-Part.Nij <- psinipij * rho.pop
-Part.Ri <- rowSums( psinipij * ( 1 - rho.pop ) )
-Part.Cj <- colSums( psicnipij * ( 1 - tau.pop ) )
-Part.M <- sum( psicnipij * tau.pop )
+Part.Nij <- psi.pop * rhonipij
+Part.Ri <- rowSums( psi.pop * rhocnipij )
+Part.Cj <- colSums( (1 - psi.pop) * taucnipij )
+Part.M <- sum( (1 - psi.pop ) * taunipij )
 
 # build matrix
 exp.props <- rbind( cbind( Part.Nij , Part.Ri ) , c( Part.Cj , Part.M ) )
@@ -88,8 +90,8 @@ des.rep <- as.svrepdesign( des.lin , "bootstrap" , replicates = 100 )
 svytable( ~v0+v1 , des.lin , addNA = TRUE )
 
 # estimate gross flows
-suppressWarnings( flow_srs_lin <- svyflow( ~v0+v1 , des.lin , model = "B" , verbose = FALSE , as.zero.flows = TRUE ) )
-suppressWarnings( flow_srs_rep <- svyflow( ~v0+v1 , des.rep , model = "B" , verbose = FALSE , as.zero.flows = TRUE ) )
+flow_srs_lin <- svyflow( ~v0+v1 , des.lin , model = "C" , verbose = FALSE )
+flow_srs_rep <- svyflow( ~v0+v1 , des.rep , model = "C" , verbose = FALSE )
 
 # test extraction of associated measures
 test_that( "extraction of estimates: linearization" , {
