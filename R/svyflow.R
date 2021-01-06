@@ -274,6 +274,16 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
   Cj <- Amat[ nrow( Amat ) , ][ - ncol( Amat ) ]
   M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
 
+  # test for zero counts in observed flows
+  if ( any( Nij <= 0 ) & !as.zero.flows ) {
+    print( Amat , quote = FALSE )
+    stop( "Some observed flow cells had zero counts.
+             If those are zero counts in the population transition probability matrix, consider using as.zero.flows = TRUE.
+             If not, consider collapsing categories." )
+  } else if ( any( Nij <= 0 ) & as.zero.flows ) {
+    warning( "Some observed flow cells had zero counts. Model fitted with zeroes in the population transition probability matrix." , immediate. = TRUE )
+  }
+
   # treat full response
   if ( all( c( Ri , Cj , M ) == 0 ) ) {
 
@@ -345,16 +355,6 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
     # return final object
     return( rval )
 
-  }
-
-  # test for zero counts in observed flows
-  if ( any( Nij <= 0 ) & !as.zero.flows ) {
-    print( Amat , quote = FALSE )
-    stop( "Some observed flow cells had zero counts.
-             If those are zero counts in the population transition probability matrix, consider using as.zero.flows = TRUE.
-             If not, consider collapsing categories." )
-  } else if ( any( Nij <= 0 ) & as.zero.flows ) {
-    warning( "Some observed flow cells had zero counts. Model fitted with zeroes in the population transition probability matrix." , immediate. = TRUE )
   }
 
   # model fitting
