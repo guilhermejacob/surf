@@ -90,14 +90,6 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
   Cj <- Amat[ nrow( Amat ) , ][ - ncol( Amat ) ]
   M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
 
-  # treat full response
-  if ( all( c( Ri , Cj , M ) == 0 ) & all( Nij > 0 ) ) {
-
-    # issue warning
-    stop( "counts show full response." )
-
-  }
-
   # test for zero counts in observed flows
   if ( any( Nij <= 0 ) & !as.zero.flows ) {
     print( Amat , quote = FALSE )
@@ -106,6 +98,79 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
              If not, consider collapsing categories." )
   } else if ( any( Nij <= 0 ) & as.zero.flows ) {
     warning( "Some observed flow cells had zero counts. Model fitted with zeroes in the population transition probability matrix." , immediate. = TRUE )
+  }
+
+  # treat full response
+  if ( all( c( Ri , Cj , M ) == 0 ) ) {
+
+    # model fitting
+    N <- sum( Nij )
+    mfit <-
+      list( "observed.counts" = Amat ,
+            eta = rowSums( Nij ) / N ,
+            pij = sweep( Nij , 1 , rowSums( Nij ) , "/" ) )
+    mfit$nipij <- sweep( mfit$pij , 1 , mfit$eta , "*" )
+    mfit$gamma <- colSums( mfit$nipij )
+    mfit$delta <- N * ( mfit$gamma - mfit$eta )
+    mfit$muij <- N*sweep( mfit$pij , 1 , mfit$eta , "*" )
+
+    # visit proportion
+    model.expected <- rbind( cbind( mfit$nipij , rep( 0 , ncol( Nij ) ) ) , rep( 0 , nrow( Nij ) + 1 ) )
+    interview.number <- data.frame( visit = rep( 1 , length( ww ) ) )
+    vVec <- c( stats::xtabs( ww ~ visit , data = interview.number , addNA = TRUE , drop.unused.levels = FALSE ) / sum( ww ) )
+    model.expected <- outer( model.expected , vVec )
+
+    # rao-scott adjustment of the chi-square
+    K <- dim( model.expected )[1] - 1
+    n.parms <- K + K^2
+    pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms , pij.zero = sum( mfit$pij == 0 ) )
+
+    # linearization
+    llin <- FullResponse.linearization( xx , ww , mfit , design )
+
+    # calculate variance
+    mvar <- lapply( llin , function(z) survey::svyrecvar( sweep( z , 1 , ww , "*" ) , clusters = design$cluster , stratas = design$strata , fpcs = design$fpc , postStrata = design$postStrata ) )
+
+    # build results list
+    res <- sapply( c( "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
+      if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
+        this.stats <- mfit[[z]]
+        attr( this.stats , "var" ) <- mvar[[z]]
+        names( this.stats ) <- if ( length( this.stats ) > 1 ) xlevels else z
+        colnames( attr( this.stats , "var" ) ) <- rownames( attr( this.stats , "var" ) ) <- if ( length( attr( this.stats , "var" ) ) > 1 ) xlevels else z
+        class( this.stats ) <- "svystat"
+        attr( this.stats , "statistic" ) <- z
+      } else if ( z %in% c( "pij" , "muij" ) ) {
+        this.stats <- mfit[[z]]
+        these.classes <- expand.grid( dimnames( this.stats ) )
+        these.classes <- these.classes[ order( these.classes[, 2 ] ) , ]
+        these.classes <- apply( these.classes , 1 , paste, collapse = ":" )
+        this.vector <- c( t( this.stats ) )
+        names( this.vector ) <- these.classes
+        this.vmat <-  mvar[[z]]
+        dimnames( this.vmat ) <- list( these.classes , these.classes )
+        attr( this.vector , "var" ) <- this.vmat
+        attr( this.vector , "categories" ) <- dimnames( this.stats )
+        class( this.vector ) <- c( "svymstat" , "svystat" )
+        attr( this.vector , "statistic" ) <- z
+        this.stats <- this.vector
+      }
+      return(this.stats)
+    } , simplify = FALSE )
+
+
+    # create final object
+    rval <- res[ c( "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
+    rval$model <- "Full Response"
+    class(rval) <- "flowstat"
+    attr( rval , "formula" ) <- x
+    attr( rval , "has.order" ) <- has.order
+    attr( rval , "iter" ) <- NA
+    attr( rval , "adj.chisq" ) <- pearson
+
+    # return final object
+    return( rval )
+
   }
 
   # model fitting
@@ -210,10 +275,75 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
   M <- Amat[ nrow( Amat ) , ncol( Amat ) ]
 
   # treat full response
-  if ( all( c( Ri , Cj , M ) == 0 ) & all( Nij >= 0 ) ) {
+  if ( all( c( Ri , Cj , M ) == 0 ) ) {
 
-    # issue warning
-    stop( "counts show full response." )
+    # model fitting
+    N <- sum( Nij )
+    mfit <-
+      list( "observed.counts" = Amat ,
+            eta = rowSums( Nij ) / N ,
+            pij = sweep( Nij , 1 , rowSums( Nij ) , "/" ) )
+    mfit$nipij <- sweep( mfit$pij , 1 , mfit$eta , "*" )
+    mfit$gamma <- colSums( mfit$nipij )
+    mfit$delta <- N * ( mfit$gamma - mfit$eta )
+    mfit$muij <- N*sweep( mfit$pij , 1 , mfit$eta , "*" )
+
+    # visit proportion
+    model.expected <- rbind( cbind( mfit$nipij , rep( 0 , ncol( Nij ) ) ) , rep( 0 , nrow( Nij ) + 1 ) )
+    interview.number <- data.frame( visit = rep( 1 , length( ww ) ) )
+    vVec <- c( stats::xtabs( ww ~ visit , data = interview.number , addNA = TRUE , drop.unused.levels = FALSE ) / sum( ww ) )
+    model.expected <- outer( model.expected , vVec )
+
+    # rao-scott adjustment of the chi-square
+    K <- dim( model.expected )[1] - 1
+    n.parms <- K + K^2
+    pearson <- rao.scott( xx , interview.number , ww , model.expected , design , n.parms , pij.zero = sum( mfit$pij == 0 ) )
+
+    # linearization
+    llin <- FullResponse.linearization( xx , ww , mfit , design )
+
+    # calculate variance
+    mvar <- lapply( llin , function(z) stats::vcov( survey::svytotal( z , design ) ) )
+
+    # build results list
+    res <- sapply( c( "eta" , "pij" , "muij" , "gamma" , "delta" ) , function(z) {
+      if ( z %in% c( "psi" , "rho" , "tau" , "eta" , "gamma" , "delta" ) ) {
+        this.stats <- mfit[[z]]
+        attr( this.stats , "var" ) <- mvar[[z]]
+        names( this.stats ) <- if ( length( this.stats ) > 1 ) xlevels else z
+        colnames( attr( this.stats , "var" ) ) <- rownames( attr( this.stats , "var" ) ) <- if ( length( attr( this.stats , "var" ) ) > 1 ) xlevels else z
+        class( this.stats ) <- "svystat"
+        attr( this.stats , "statistic" ) <- z
+      } else if ( z %in% c( "pij" , "muij" ) ) {
+        this.stats <- mfit[[z]]
+        these.classes <- expand.grid( dimnames( this.stats ) )
+        these.classes <- these.classes[ order( these.classes[, 2 ] ) , ]
+        these.classes <- apply( these.classes , 1 , paste, collapse = ":" )
+        this.vector <- c( t( this.stats ) )
+        names( this.vector ) <- these.classes
+        this.vmat <-  mvar[[z]]
+        dimnames( this.vmat ) <- list( these.classes , these.classes )
+        attr( this.vector , "var" ) <- this.vmat
+        attr( this.vector , "categories" ) <- dimnames( this.stats )
+        class( this.vector ) <- c( "svymstat" , "svystat" )
+        attr( this.vector , "statistic" ) <- z
+        this.stats <- this.vector
+      }
+      return(this.stats)
+    } , simplify = FALSE )
+
+
+    # create final object
+    rval <- res[ c( "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
+    rval$model <- "Full Response"
+    class(rval) <- "flowstat"
+    attr( rval , "formula" ) <- x
+    attr( rval , "has.order" ) <- has.order
+    attr( rval , "iter" ) <- NA
+    attr( rval , "adj.chisq" ) <- pearson
+
+    # return final object
+    return( rval )
 
   }
 
