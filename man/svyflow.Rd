@@ -13,6 +13,7 @@
   tol = 1e-04,
   maxit = 5000,
   verbose = FALSE,
+  as.zero.flows = FALSE,
   ...
 )
 
@@ -23,6 +24,7 @@
   tol = 1e-04,
   maxit = 5000,
   verbose = FALSE,
+  as.zero.flows = FALSE,
   ...
 )
 }
@@ -38,6 +40,8 @@
 \item{maxit}{Maximum number of iterations for iterative proportional fitting. Defaults to \code{maxit = 5000}.}
 
 \item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
+
+\item{as.zero.flows}{Zeroes in the observed gross flows should be considered as zeroes in the population transition probability matrix? Defaults to \code{as.zero.flows = FALSE}.}
 
 \item{...}{future expansion.}
 }
