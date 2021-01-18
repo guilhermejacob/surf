@@ -11,7 +11,7 @@ library( surf )
 N <- as.integer( 10^5 )
 n <- as.integer( 10^4 )
 
-# superpopulation hyperparameters
+# superpopulation parameters
 eta.pop <- c( .40 , .30, .20, .10 )
 pij.pop <- matrix( c(.60,  .10 , .20, .10,
                      .30, .50, .10, .10,

@@ -12,7 +12,7 @@ library( testthat )
 N <- as.integer( 10^5 )
 n <- as.integer( 10^4 )
 
-# superpopulation hyperparameters
+# superpopulation parameters
 eta.pop <- c( .30 , .30, .20, .20 )
 pij.pop <- matrix( c(.60,  .10 , .20, .10,
                      .30, .50, 0, .20,
