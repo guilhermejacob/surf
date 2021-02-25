@@ -14,6 +14,7 @@
   maxit = 5000,
   verbose = FALSE,
   as.zero.flows = FALSE,
+  influence = FALSE,
   ...
 )
 
@@ -25,6 +26,7 @@
   maxit = 5000,
   verbose = FALSE,
   as.zero.flows = FALSE,
+  influence = FALSE,
   ...
 )
 }
@@ -41,7 +43,9 @@
 
 \item{verbose}{Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.}
 
-\item{as.zero.flows}{Zeroes in the observed gross flows should be considered as zeroes in the population transition probability matrix? Defaults to \code{as.zero.flows = FALSE}.}
+\item{as.zero.flows}{Should zeroes in the observed gross flows should be considered as zeroes in the population transition probability matrix? Defaults to \code{as.zero.flows = FALSE}.}
+
+\item{influence}{Should influence functions estimates be stored? Defaults to \code{influence = FALSE}.}
 
 \item{...}{future expansion.}
 }

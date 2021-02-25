@@ -9,7 +9,8 @@
 #' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
 #' @param maxit  Maximum number of iterations for iterative proportional fitting. Defaults to \code{maxit = 5000}.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
-#' @param as.zero.flows  Zeroes in the observed gross flows should be considered as zeroes in the population transition probability matrix? Defaults to \code{as.zero.flows = FALSE}.
+#' @param as.zero.flows  Should zeroes in the observed gross flows should be considered as zeroes in the population transition probability matrix? Defaults to \code{as.zero.flows = FALSE}.
+#' @param influence  Should influence functions estimates be stored? Defaults to \code{influence = FALSE}.
 #' @param ...  future expansion.
 #'
 #' @details It is important to distinguish "missing" responses from "unnaplicable" responses. This is feasible by subsetting the design
@@ -53,7 +54,7 @@
 #' @export
 #' @rdname svyflow
 #' @method svyflow survey.design2
-svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , ... ){
+svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , influence = FALSE , ... ){
 
   # test values
   model <- match.arg( model , several.ok = FALSE )
@@ -158,6 +159,8 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
       return(this.stats)
     } , simplify = FALSE )
 
+    # add influence attribute
+    for ( this.stat in names( res ) ) attr( res[[ this.stat ]] , "influence" ) <- if ( influence ) llin[[this.stat]] else NULL
 
     # create final object
     rval <- res[ c( "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
@@ -220,6 +223,9 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
     return(this.stats)
   } , simplify = FALSE )
 
+  # add influence attribute
+  for ( this.stat in names( res ) ) attr( res[[ this.stat ]] , "influence" ) <- if ( influence ) llin[[this.stat]] else NULL
+
   # create final object
   rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
   rval$model <- mfit$model
@@ -237,7 +243,7 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
 #' @export
 #' @rdname svyflow
 #' @method svyflow svyrep.design
-svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , ... ){
+svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , influence = FALSE , ... ){
 
   # test values
   model <- match.arg( model , several.ok = FALSE )
@@ -342,6 +348,8 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
       return(this.stats)
     } , simplify = FALSE )
 
+    # add influence attribute
+    for ( this.stat in names( res ) ) attr( res[[ this.stat ]] , "influence" ) <- if ( influence ) llin[[this.stat]] else NULL
 
     # create final object
     rval <- res[ c( "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
@@ -403,6 +411,9 @@ svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol
     }
     return(this.stats)
   } , simplify = FALSE )
+
+  # add influence attribute
+  for ( this.stat in names( res ) ) attr( res[[ this.stat ]] , "influence" ) <- if ( influence ) llin[[this.stat]] else NULL
 
   # create final object
   rval <- res[ c( "psi" , "rho" , "tau" , "eta" , "gamma" , "pij" , "muij" , "delta" ) ]
