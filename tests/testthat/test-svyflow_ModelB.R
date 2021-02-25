@@ -90,8 +90,8 @@ svytable( ~v0+v1 , des.lin , addNA = TRUE )
 # options( error = recover )
 
 # estimate gross flows
-flow_srs_lin <- svyflow( ~v0+v1 , des.lin , model = "B" , verbose = FALSE )
-flow_srs_rep <- svyflow( ~v0+v1 , des.rep , model = "B" , verbose = FALSE )
+flow_srs_lin <- svyflow( ~v0+v1 , des.lin , model = "B" , verbose = FALSE , influence = TRUE )
+flow_srs_rep <- svyflow( ~v0+v1 , des.rep , model = "B" , verbose = FALSE , influence = TRUE )
 
 # test extraction of associated measures
 test_that( "extraction of estimates: linearization" , {
@@ -170,3 +170,16 @@ test_that("compare point estimates vs population values",{
   expect_equivalent( coef( flow_srs_rep$muij , to.matrix = TRUE ) , muij.pop , tolerance = .20 )
 
 } )
+
+# test comparability of influence functions
+test_that("compare influence functions estimates",{
+  
+  # influence functions
+  expect_identical( attr( flow_srs_lin$eta , "influence" ) , attr( flow_srs_rep$eta , "influence" ) )
+  expect_identical( attr( flow_srs_lin$pij , "influence" ) , attr( flow_srs_rep$pij , "influence" ) )
+  expect_identical( attr( flow_srs_lin$psi , "influence" ) , attr( flow_srs_rep$psi , "influence" ) )
+  expect_identical( attr( flow_srs_lin$rho , "influence" ) , attr( flow_srs_rep$rho , "influence" ) )
+  expect_identical( attr( flow_srs_lin$tau , "influence" ) , attr( flow_srs_rep$tau , "influence" ) )
+  
+} )
+
