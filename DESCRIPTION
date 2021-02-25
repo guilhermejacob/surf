@@ -1,6 +1,6 @@
 Package: surf
 Type: Package
-Title: Survey-based Flow Estimation
+Title: Survey-Based Gross Flows Estimation
 Version: 0.9.8
 Author: Guilherme Jacob
 Date: 23-12-2020
