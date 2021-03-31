@@ -1,9 +1,9 @@
 Package: surf
 Type: Package
 Title: Survey-Based Gross Flows Estimation
-Version: 0.9.8
+Version: 1.0.0
 Author: Guilherme Jacob
-Date: 23-12-2020
+Date: 31-03-2021
 Maintainer: Guilherme Jacob <guilhermejacob91@gmail.com>
 Description: Estimation of Gross Flows with Non-Response under Complex Sampling Designs.
 BugReports: https://github.com/guilhermejacob/surf

@@ -245,6 +245,9 @@ svyflow.survey.design2 <- function( x , design , model = c("A","B","C","D") , to
 #' @method svyflow svyrep.design
 svyflow.svyrep.design <- function( x , design , model = c("A","B","C","D") , tol = 1e-4 , maxit = 5000 , verbose = FALSE , as.zero.flows = FALSE , influence = FALSE , ... ){
 
+  # return warning
+  warning( "svyflow is experimental for replicate-based survey design objects." , immediate. = TRUE )
+
   # test values
   model <- match.arg( model , several.ok = FALSE )
 
