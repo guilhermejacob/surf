@@ -1,4 +1,4 @@
-[![Travis-CI Build Status](https://travis-ci.com/guilhermejacob/glowing-lamp.svg?token=kbmKBxvqsxm1B4jNVdmP&branch=master)](https://travis-ci.com/guilhermejacob/glowing-lamp)
+[![Build Status](https://travis-ci.com/guilhermejacob/surf.svg?branch=master)](https://travis-ci.com/guilhermejacob/surf)
 
 # `surf`: Survey-Based Gross Flows Estimation
 
