@@ -15,4 +15,7 @@ data("LFS79.0910")
 \description{
 Artificial dataset based on Stasny (1987) LFS counts for the 1979 September-October flows.
 }
+\references{
+STASNY, E. A. Some Markov-chain models for nonresponse in estimating gross labor force flows. \emph{Journal of Official Statistics}, v. 3, n. 4, p. 359, 1987.
+}
 \keyword{real}

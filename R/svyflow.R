@@ -5,7 +5,7 @@
 #'
 #' @param x  a one-sided formula indicating a \emph{factor} variable.
 #' @param design  survey design object
-#' @param model  model for non-response. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
+#' @param model  Stasny (1987) model for the non-response process. Possibilities: \code{"A", "B", "C", "D"}. Defaults to \code{model = "A"}.
 #' @param tol  Tolerance for iterative proportional fitting. Defaults to \code{1e-4}.
 #' @param maxit  Maximum number of iterations for iterative proportional fitting. Defaults to \code{maxit = 5000}.
 #' @param verbose  Print proportional fitting iterations. Defaults to \code{verbose = FALSE}.
@@ -20,15 +20,19 @@
 #' actual non-response. You could do that by looking for people who were in working age in any round, for instance. This can be done by using \code{subset},
 #' as you should for a \code{survey design} object.
 #'
-#' @return Objects of class "flowstat", which are tables with a "var" attribute giving the variance and a "statistic" attribute giving the type of flow.
-#'
+#' @return Objects of class \code{flowstat}, a list of \code{svystat} and \code{svymstat} (a matrix version of \code{svystat}) objects.
+#' The \code{flowstat} object contais estimates of: the initial response probababilities \code{psi}, the response/response transition probabilities \code{rho},
+#' the non-response/non-response transition probabilities \code{tau}, the (non-response corrected) initial and final distributions across categories \code{eta} and \code{gamma},
+#' the (non-response corrected) transition probability matrix \code{pij}, the (non-response corrected) gross flows matrix \code{muij}, and the vector of net flows \code{delta}.
 #' These objects have methods for coef, vcov, SE, and cv.
+#'
+#' A Rao-Scott Corrected Chi^2 test is also calculated.
 #'
 #' @author Guilherme Jacob
 #'
-#' @examples
+#' @references STASNY, E. A. Some Markov-chain models for nonresponse in estimating gross labor force flows. \emph{Journal of Official Statistics}, v. 3, n. 4, p. 359, 1987.
 #'
-#' @references GUTIERREZ, H. A.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
+#' GUTIERREZ, H. A.; TRUJILLO, L.; SILVA, P. L. N. The estimation of gross flows in complex surveys with random nonresponse.
 #' \emph{Survey Methodology}, v. 40, n. 2, p. 285–321, dec. 2014. URL \url{https://www150.statcan.gc.ca/n1/en/catalogue/12-001-X201400214113}.
 #'
 #' LUMLEY, T. \emph{Complex Surveys:} A guide to analysis using R.
