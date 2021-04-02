@@ -63,10 +63,9 @@ rao.scott <- function( xx , visit.number , ww , model.estimates , design , n.par
   statistic <- statistic / ( 1 +  a2 )
 
   # score
-  warn <- options(warn = -1)
-  pearson <- chisq.test( apply( obs.mat , 1:2 , sum ) )
+  suppressWarnings( pearson <- chisq.test( apply( obs.mat , 1:2 , sum ) ) )
   pearson$statistic <- statistic
-  pearson$p.value <- pf( statistic , df , df * nu , lower.tail = FALSE )
+  suppressWarnings( pearson$p.value <- pf( statistic , df , df * nu , lower.tail = FALSE ) )
   attr(pearson$statistic, "names") <- "F"
   pearson$parameter <- c(ndf = df, ddf = df * nu)
   pearson$data.name <- "Expected vs. Observed Proportions"
