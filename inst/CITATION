@@ -1,5 +1,6 @@
 year <- sub("-.*", "", meta$Date)
 note <- sprintf("R package version %s", meta$Version)
+txtVersion <- sprintf( "Guilherme Jacob (%1$s). surf: Survey-based Gross Flow Estimation. R package version %2$s.", year , meta$Version )
 
 citHeader("To cite the surf package in publications use one or more of:")
 
@@ -8,7 +9,7 @@ citEntry( entry = "misc",
           author = person("Guilherme", "Jacob"),
           year = year ,
           note = note ,
-          textVersion = "Guilherme Jacob (2020). surf: Survey-based Gross Flow Estimation. R package version 0.2.2." )
+          textVersion = txtVersion )
 
 
 citEntry( entry="Unpublished",

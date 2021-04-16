@@ -3,7 +3,6 @@
 language: r
 r:
   - release
-  - devel
 sudo: true
 
 script:
